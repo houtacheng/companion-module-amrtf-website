@@ -1,0 +1,19 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Node dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build intermediate files
+companion-module-amrtf/*.tgz
+companion-module-amrtf/pkg/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo

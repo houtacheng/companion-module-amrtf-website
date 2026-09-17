@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>大慈恩 AMRTF Companion 橋樑</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      width: 310px;
+      margin: 0;
+      padding: 16px;
+      background-color: #f9f9f9;
+      color: #333;
+    }
+    h3 {
+      margin-top: 0;
+      margin-bottom: 12px;
+      font-size: 15px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      padding: 7px 10px;
+      border-radius: 4px;
+      margin-bottom: 14px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .connected {
+      background-color: #e6f4ea;
+      color: #137333;
+    }
+    .connected .status-dot {
+      background-color: #1e8e3e;
+    }
+    .disconnected {
+      background-color: #fce8e6;
+      color: #c5221f;
+    }
+    .disconnected .status-dot {
+      background-color: #d93025;
+    }
+    .page-card {
+      background: white;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      padding: 10px;
+      margin-bottom: 14px;
+      font-size: 12px;
+    }
+    .page-card-title {
+      font-weight: bold;
+      color: #202124;
+      margin-bottom: 4px;
+      line-height: 1.4;
+    }
+    .page-card-desc {
+      color: #5f6368;
+      line-height: 1.4;
+      margin-bottom: 6px;
+    }
+    .btn-secondary {
+      width: 100%;
+      padding: 7px;
+      background-color: #3b71ca;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-secondary:hover {
+      background-color: #285199;
+    }
+    .form-group {
+      margin-bottom: 10px;
+    }
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: 500;
+      color: #444;
+      margin-bottom: 4px;
+    }
+    .ip-row {
+      display: flex;
+      gap: 6px;
+    }
+    input[type="text"] {
+      flex: 1;
+      box-sizing: border-box;
+      padding: 7px 8px;
+      font-size: 13px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    input[type="number"] {
+      width: 70px;
+      box-sizing: border-box;
+      padding: 7px 6px;
+      font-size: 13px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      text-align: center;
+    }
+    button.save-btn {
+      width: 100%;
+      padding: 9px;
+      background-color: #b5985a;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-size: 13px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 4px;
+    }
+    button.save-btn:hover {
+      background-color: #9c8045;
+    }
+    .quick-links {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 4px;
+      margin-bottom: 10px;
+    }
+    .quick-link {
+      font-size: 11px;
+      color: #1a73e8;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+    .save-feedback {
+      display: none;
+      font-size: 12px;
+      color: #137333;
+      text-align: center;
+      margin-top: 6px;
+      font-weight: 500;
+    }
+    .help-text {
+      font-size: 11px;
+      color: #777;
+      margin-top: 12px;
+      line-height: 1.4;
+      background: #f0f0f0;
+      padding: 8px;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+    <h3 style="margin: 0; font-size: 15px;">大慈恩 Companion 橋樑</h3>
+    <span id="versionTag" style="font-size: 11px; background: #e8eaed; color: #5f6368; padding: 2px 7px; border-radius: 10px; font-weight: 600;">v1.1.0</span>
+  </div>
+
+  <div id="updateBanner" style="display: none; background: #e8f0fe; border: 1px solid #c2e7ff; border-radius: 6px; padding: 9px 10px; margin-bottom: 12px; font-size: 12px; color: #0b57d0;">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      <div style="font-weight: bold;" id="updateBannerTitle">🎉 發現新版本！</div>
+      <span id="closeUpdateBanner" style="cursor: pointer; color: #5f6368; font-size: 15px; font-weight: bold;">&times;</span>
+    </div>
+    <div style="margin-top: 4px; line-height: 1.4;" id="updateBannerMsg">GitHub 儲存庫有新版本發布。</div>
+    <a id="updateBannerLink" href="#" target="_blank" style="display: inline-block; margin-top: 5px; font-weight: 600; color: #0b57d0; text-decoration: underline;">前往 GitHub 下載更新 ↗</a>
+  </div>
+
+  <div id="statusContainer" class="status-badge disconnected">
+    <span class="status-dot"></span>
+    <span id="statusText">正在偵測連線...</span>
+  </div>
+
+  <div id="pageCard" class="page-card" style="display: none;">
+    <div class="page-card-title" id="pageTitle">當前分頁</div>
+    <div class="page-card-desc" id="pageDesc"></div>
+    <button type="button" class="btn-secondary" id="claimActiveBtn">將本分頁設為受控目標</button>
+  </div>
+
+  <div class="form-group">
+    <label for="hostIp">Companion 主機 IP 與連接埠：</label>
+    <div class="ip-row">
+      <input type="text" id="hostIp" placeholder="127.0.0.1 或 區網IP">
+      <input type="number" id="portNum" value="9999" min="1024" max="65535">
+    </div>
+    <div class="quick-links">
+      <span class="quick-link" id="setLocalhostBtn">設為本機 (127.0.0.1)</span>
+    </div>
+  </div>
+
+  <hr style="border: 0; border-top: 1px solid #e0e0e0; margin: 14px 0 10px 0;">
+
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+    <h4 style="margin: 0; font-size: 13px;">MQTT 控制與推播</h4>
+    <div id="mqttStatusBadge" style="font-size: 11px; padding: 2px 6px; border-radius: 4px; background: #eee; color: #666;">未啟用</div>
+  </div>
+
+  <div class="form-group">
+    <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-weight: 500;">
+      <input type="checkbox" id="mqttEnabled">
+      啟用 MQTT 雙向控制與狀態字幕推播
+    </label>
+  </div>
+
+  <div id="mqttFields" style="display: none;">
+    <div class="form-group">
+      <label for="mqttProtocol">連線協定 (Protocol)：</label>
+      <select id="mqttProtocol" style="width: 100%; box-sizing: border-box; padding: 7px 8px; font-size: 13px; border: 1px solid #ccc; border-radius: 4px; background: white;">
+        <option value="ws://">ws:// (MQTT over WebSocket - 預設埠 1884)</option>
+        <option value="wss://">wss:// (MQTT over WebSocket with SSL - 預設埠 8884)</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="mqttHost">Broker 主機 IP 與連接埠：</label>
+      <div class="ip-row">
+        <input type="text" id="mqttHost" placeholder="10.41.10.3 或 127.0.0.1">
+        <input type="number" id="mqttPort" placeholder="1884" value="1884" min="1" max="65535">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="mqttPath">路徑 Path (選填)：</label>
+      <input type="text" id="mqttPath" placeholder="例如 / 或 /mqtt (預設留空)">
+    </div>
+
+    <div class="form-group">
+      <label for="mqttBrokerUrl">完整連線網址 (自動組合或直接編輯)：</label>
+      <input type="text" id="mqttBrokerUrl" placeholder="ws://10.41.10.3:1884">
+    </div>
+
+    <div id="mqttErrorTip" style="display: none; font-size: 11px; color: #b3261e; background: #fce8e6; padding: 6px 8px; border-radius: 4px; margin-bottom: 10px; line-height: 1.4;"></div>
+
+    <div class="form-group">
+      <label for="mqttTopicPrefix">主題前綴 (Topic Prefix)：</label>
+      <input type="text" id="mqttTopicPrefix" placeholder="amrtf" value="amrtf">
+    </div>
+
+    <div class="form-group">
+      <label for="mqttUsername">帳號 (選填)：</label>
+      <input type="text" id="mqttUsername" placeholder="可留空">
+    </div>
+
+    <div class="form-group">
+      <label for="mqttPassword">密碼 (選填)：</label>
+      <input type="password" id="mqttPassword" placeholder="可留空" style="width: 100%; box-sizing: border-box; padding: 7px 8px; font-size: 13px; border: 1px solid #ccc; border-radius: 4px;">
+    </div>
+  </div>
+
+  <button type="button" class="save-btn" id="saveBtn">儲存所有設定並重新連線</button>
+  <div id="saveFeedback" class="save-feedback">✓ 已成功儲存！正在重新連線...</div>
+
+  <hr style="border: 0; border-top: 1px solid #e0e0e0; margin: 14px 0 10px 0;">
+
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+    <h4 style="margin: 0; font-size: 13px;">軟體更新與 GitHub 儲存庫</h4>
+    <button type="button" id="checkUpdateBtn" style="font-size: 11px; padding: 3px 8px; border-radius: 4px; border: 1px solid #ccc; background: white; cursor: pointer; color: #333;">🔍 檢查更新</button>
+  </div>
+  <div id="updateCheckStatus" style="font-size: 11px; color: #5f6368; margin-bottom: 8px;"></div>
+
+  <div class="form-group" style="margin-bottom: 6px;">
+    <label for="githubRepo" style="font-size: 11px; color: #555;">GitHub 儲存庫 (擁有者/專案)：</label>
+    <input type="text" id="githubRepo" placeholder="例如 houtacheng/companion-module-amrtf-website" value="houtacheng/companion-module-amrtf-website" style="font-size: 11px; padding: 5px 6px;">
+  </div>
+
+  <div class="help-text">
+    💡 <b>說明與通訊埠指南</b>：<br>
+    • <b>跨電腦控制</b>：請填入 Companion 主機區網 IP。<br>
+    • <b>MQTT 協定說明</b>：Chrome 外掛受限於瀏覽器 Web 沙盒環境，必須透過 <b>WebSocket</b> 連線（請使用 <code>ws://</code> 預設埠 <b>1884</b>，或加密 <code>wss://</code> 預設埠 <b>8884</b>）。<br>
+    • <b>TCP 埠提醒</b>：1883 與 8883 為純 TCP 協定通訊埠，瀏覽器無法直接連接，請務必使用 WebSocket 通訊埠 (1884 / 8884)。<br>
+    • <b>即時字幕推播</b>：主題為 <code>{prefix}/status/current_subtitle</code>。
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

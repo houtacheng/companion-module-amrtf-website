@@ -1,0 +1,24 @@
+import type ModuleInstance from './main.js';
+export type VariablesSchema = {
+    lesson_number: string;
+    lesson_title: string;
+    play_state: string;
+    current_time: number;
+    current_time_str: string;
+    duration: number;
+    duration_str: string;
+    playback_rate: number;
+    theme: string;
+    speech_mode: string;
+    scroll_mode: string;
+    font_size: number;
+    fullscreen: string;
+    looping: string;
+    master_range: string;
+    client_ip: string;
+    connected_tabs_count: number;
+    active_tab_title: string;
+    active_tab_id: string;
+    current_subtitle: string;
+};
+export declare function UpdateVariableDefinitions(self: ModuleInstance): void;
