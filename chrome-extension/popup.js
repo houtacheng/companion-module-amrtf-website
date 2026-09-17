@@ -34,7 +34,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const closeUpdateBanner = document.getElementById('closeUpdateBanner');
   const checkUpdateBtn = document.getElementById('checkUpdateBtn');
   const updateCheckStatus = document.getElementById('updateCheckStatus');
-  const githubRepoInput = document.getElementById('githubRepo');
+  const DEFAULT_GITHUB_REPO = 'houtacheng/companion-module-amrtf-website';
 
   const currentManifest = chrome.runtime.getManifest();
   if (versionTag && currentManifest.version) {
@@ -68,7 +68,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   async function checkForUpdates(manual = false) {
-    const repo = (githubRepoInput?.value || '').trim() || 'houtacheng/companion-module-amrtf-website';
+    const repo = DEFAULT_GITHUB_REPO;
     const curVer = currentManifest.version || '1.1.0';
 
     if (manual && updateCheckStatus) {
@@ -267,10 +267,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       'updateUrl',
     ],
     (result) => {
-      if (result.githubRepo && githubRepoInput) {
-        githubRepoInput.value = result.githubRepo;
-      }
-
       // 若背景已偵測到新版本，立即呈現更新橫幅
       if (result.updateAvailable && result.latestVersion && updateBanner) {
         updateBanner.style.display = 'block';
@@ -466,7 +462,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       mqttTopicPrefix: mqttTopicPrefix,
       mqttUsername: mqttUsername,
       mqttPassword: mqttPassword,
-      githubRepo: githubRepoInput ? githubRepoInput.value.trim() : 'houtacheng/companion-module-amrtf-website',
     });
 
     currentLastError = '';
