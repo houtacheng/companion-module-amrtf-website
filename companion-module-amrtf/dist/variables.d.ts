@@ -20,5 +20,8 @@ export type VariablesSchema = {
     active_tab_title: string;
     active_tab_id: string;
     current_subtitle: string;
+    annotations_state: string;
+    annotations_count: number;
+    ball_state: string;
 };
 export declare function UpdateVariableDefinitions(self: ModuleInstance): void;

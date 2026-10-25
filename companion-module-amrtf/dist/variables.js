@@ -20,6 +20,9 @@ export function UpdateVariableDefinitions(self) {
         active_tab_title: { name: '當前受控分頁標題' },
         active_tab_id: { name: '當前受控分頁識別碼' },
         current_subtitle: { name: '目前播放文字 (字幕)' },
+        annotations_state: { name: '標註顯示狀態 (顯示中 / 已隱藏)' },
+        annotations_count: { name: '目前頁面的標註數量' },
+        ball_state: { name: '懸浮球狀態 (顯示中 / 已隱藏)' },
     });
 }
 //# sourceMappingURL=variables.js.map

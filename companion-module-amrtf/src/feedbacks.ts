@@ -36,6 +36,14 @@ export type FeedbacksSchema = {
       mode: number
     }
   }
+  annotations_hidden: {
+    type: 'boolean'
+    options: Record<string, never>
+  }
+  ball_hidden: {
+    type: 'boolean'
+    options: Record<string, never>
+  }
 }
 
 export function UpdateFeedbacks(self: ModuleInstance): void {
@@ -174,6 +182,34 @@ export function UpdateFeedbacks(self: ModuleInstance): void {
       ],
       callback: (feedback) => {
         return self.currentState.scrollMode === Number(feedback.options.mode)
+      },
+    },
+
+    annotations_hidden: {
+      type: 'boolean',
+      name: '標註已隱藏反饋',
+      description: '當標註被隱藏時改變按鈕顏色（整合版 Chrome 外掛）',
+      defaultStyle: {
+        bgcolor: combineRgb(150, 60, 60),
+        color: combineRgb(255, 255, 255),
+      },
+      options: [],
+      callback: () => {
+        return !!self.annotationState.annotationsHidden
+      },
+    },
+
+    ball_hidden: {
+      type: 'boolean',
+      name: '懸浮球已隱藏反饋',
+      description: '當懸浮球被隱藏時改變按鈕顏色（整合版 Chrome 外掛）',
+      defaultStyle: {
+        bgcolor: combineRgb(150, 60, 60),
+        color: combineRgb(255, 255, 255),
+      },
+      options: [],
+      callback: () => {
+        return !!self.annotationState.ballHidden
       },
     },
   })

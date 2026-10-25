@@ -33,12 +33,19 @@ export interface StatePayload {
         label: string;
     } | null;
     currentSubtitle?: string;
+    annotationCount?: number;
+}
+/** 標註功能（大慈恩整合外掛）的狀態：與分頁無關，是整個瀏覽器共用的設定 */
+export interface AnnotationStatePayload {
+    annotationsHidden: boolean;
+    ballHidden: boolean;
 }
 export { UpgradeScripts };
 export default class ModuleInstance extends InstanceBase<ModuleSchema> {
     config: ModuleConfig;
     private wsServer;
     currentState: StatePayload;
+    annotationState: AnnotationStatePayload;
     constructor(internal: unknown);
     init(config: ModuleConfig): Promise<void>;
     destroy(): Promise<void>;
@@ -59,5 +66,7 @@ export default class ModuleInstance extends InstanceBase<ModuleSchema> {
     setServerPortError(port: number): void;
     onTabsListUpdated(tabs: ChromeTabItem[], activeTabId: number | string | null): void;
     onClientListUpdated(): void;
+    /** 瀏覽器回報標註／懸浮球的顯示狀態（與分頁無關） */
+    onAnnotationState(state: AnnotationStatePayload): void;
     onStateUpdate(state: StatePayload, clientInfo?: ClientTabInfo): void;
 }

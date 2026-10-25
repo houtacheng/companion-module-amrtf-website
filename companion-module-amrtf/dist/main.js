@@ -27,7 +27,9 @@ export default class ModuleInstance extends InstanceBase {
         looping: false,
         masterRange: null,
         currentSubtitle: '',
+        annotationCount: 0,
     };
+    annotationState = { annotationsHidden: false, ballHidden: false };
     constructor(internal) {
         super(internal);
     }
@@ -38,6 +40,7 @@ export default class ModuleInstance extends InstanceBase {
         this.updateFeedbacks();
         this.updatePresets();
         this.updateVariableDefinitions();
+        this.setVariableValues({ annotations_state: '未連線', annotations_count: 0, ball_state: '未連線' });
         this.initWebSocketServer();
     }
     async destroy() {
@@ -148,6 +151,15 @@ export default class ModuleInstance extends InstanceBase {
         });
         this.checkFeedbacks('connected_state', 'multiple_tabs');
     }
+    /** 瀏覽器回報標註／懸浮球的顯示狀態（與分頁無關） */
+    onAnnotationState(state) {
+        this.annotationState = { annotationsHidden: !!state.annotationsHidden, ballHidden: !!state.ballHidden };
+        this.setVariableValues({
+            annotations_state: this.annotationState.annotationsHidden ? '已隱藏' : '顯示中',
+            ball_state: this.annotationState.ballHidden ? '已隱藏' : '顯示中',
+        });
+        this.checkFeedbacks('annotations_hidden', 'ball_hidden');
+    }
     onStateUpdate(state, clientInfo) {
         this.currentState = state;
         const scrollMap = ['手動', '自動持續', '自動區段'];
@@ -169,6 +181,7 @@ export default class ModuleInstance extends InstanceBase {
             looping: state.looping ? '循環中' : '未循環',
             master_range: state.masterRange ? state.masterRange.label : '無標記',
             current_subtitle: state.currentSubtitle || '',
+            annotations_count: state.annotationCount ?? 0,
             client_ip: clientInfo ? clientInfo.ip : '127.0.0.1',
             active_tab_title: clientInfo ? clientInfo.lessonTitle : state.lessonTitle,
             active_tab_id: clientInfo ? clientInfo.id : '',

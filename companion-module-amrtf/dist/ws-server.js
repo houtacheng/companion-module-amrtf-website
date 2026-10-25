@@ -60,6 +60,13 @@ export class AmrtfWsServer {
                             this.instance.onTabsListUpdated(this.chromeTabs, this.activeChromeTabId);
                             return;
                         }
+                        if (msg.type === 'ANNOTATION_STATE' && msg.data) {
+                            // 標註／懸浮球的顯示狀態（整合版外掛才會送；舊版外掛不會有這個訊息）
+                            if (this.activeClientId === clientId || this.clients.size === 1) {
+                                this.instance.onAnnotationState(msg.data);
+                            }
+                            return;
+                        }
                         if (msg.type === 'STATE_UPDATE' && msg.data) {
                             clientInfo.lessonNumber = msg.data.lessonNumber || '';
                             clientInfo.lessonTitle = msg.data.lessonTitle || '';

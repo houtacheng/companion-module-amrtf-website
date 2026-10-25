@@ -7,7 +7,7 @@
   "manufacturer": "AMRTF",
   "products": ["大慈恩官網講記"],
   "keywords": ["AMRTF", "大慈恩", "廣海明月", "月光藏", "音檔播放"],
-  "version": "1.1.0",
+  "version": "1.2.0",
   "license": "MIT",
   "repository": "git+https://github.com/amrtf/companion-module-amrtf-website.git",
   "bugs": "https://github.com/amrtf/companion-module-amrtf-website/issues",

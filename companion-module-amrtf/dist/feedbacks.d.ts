@@ -34,5 +34,13 @@ export type FeedbacksSchema = {
             mode: number;
         };
     };
+    annotations_hidden: {
+        type: 'boolean';
+        options: Record<string, never>;
+    };
+    ball_hidden: {
+        type: 'boolean';
+        options: Record<string, never>;
+    };
 };
 export declare function UpdateFeedbacks(self: ModuleInstance): void;

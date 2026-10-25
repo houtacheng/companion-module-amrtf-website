@@ -105,6 +105,18 @@ export function UpdatePresets(self) {
                 },
             ],
         },
+        {
+            id: 'annotations',
+            name: '7. 標註（需整合版外掛）',
+            definitions: [
+                {
+                    id: 'annotations_group',
+                    name: '標註顯示',
+                    type: 'simple',
+                    presets: ['annotations_toggle_btn', 'ball_toggle_btn', 'annotation_sidebar_btn', 'annotations_panel_btn'],
+                },
+            ],
+        },
     ];
     const presets = {
         // 切換下一個分頁
@@ -975,6 +987,93 @@ export function UpdatePresets(self) {
                             options: {},
                         },
                     ],
+                    up: [],
+                },
+            ],
+            feedbacks: [],
+        },
+        // 7. 標註
+        annotations_toggle_btn: {
+            type: 'simple',
+            name: '顯示 / 隱藏標註 (含反饋與數量)',
+            style: {
+                text: '標註\\n$(amrtf:annotations_state)\\n本頁$(amrtf:annotations_count)則',
+                size: 14,
+                color: combineRgb(255, 255, 255),
+                bgcolor: combineRgb(40, 90, 60),
+            },
+            steps: [
+                {
+                    down: [{ actionId: 'set_annotations', options: { mode: 'toggle' } }],
+                    up: [],
+                },
+            ],
+            feedbacks: [
+                {
+                    feedbackId: 'annotations_hidden',
+                    options: {},
+                    style: {
+                        bgcolor: combineRgb(150, 60, 60),
+                        color: combineRgb(255, 255, 255),
+                    },
+                },
+            ],
+        },
+        ball_toggle_btn: {
+            type: 'simple',
+            name: '顯示 / 隱藏懸浮球 (含反饋)',
+            style: {
+                text: '懸浮球\\n$(amrtf:ball_state)',
+                size: 14,
+                color: combineRgb(255, 255, 255),
+                bgcolor: combineRgb(60, 60, 90),
+            },
+            steps: [
+                {
+                    down: [{ actionId: 'set_floating_ball', options: { mode: 'toggle' } }],
+                    up: [],
+                },
+            ],
+            feedbacks: [
+                {
+                    feedbackId: 'ball_hidden',
+                    options: {},
+                    style: {
+                        bgcolor: combineRgb(150, 60, 60),
+                        color: combineRgb(255, 255, 255),
+                    },
+                },
+            ],
+        },
+        annotation_sidebar_btn: {
+            type: 'simple',
+            name: '標註側邊欄',
+            style: {
+                text: '標註\\n側邊欄',
+                size: 14,
+                color: combineRgb(255, 255, 255),
+                bgcolor: combineRgb(70, 70, 70),
+            },
+            steps: [
+                {
+                    down: [{ actionId: 'toggle_annotation_sidebar', options: {} }],
+                    up: [],
+                },
+            ],
+            feedbacks: [],
+        },
+        annotations_panel_btn: {
+            type: 'simple',
+            name: '全部標註面板',
+            style: {
+                text: '全部\\n標註',
+                size: 14,
+                color: combineRgb(255, 255, 255),
+                bgcolor: combineRgb(70, 70, 70),
+            },
+            steps: [
+                {
+                    down: [{ actionId: 'open_annotations_panel', options: {} }],
                     up: [],
                 },
             ],

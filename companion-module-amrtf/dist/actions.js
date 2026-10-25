@@ -494,6 +494,59 @@ export function UpdateActions(self) {
                 self.sendCommand({ action: 'modal_close' });
             },
         },
+        // 7. 標註（需要「大慈恩整合外掛」；標註的顯示狀態是整個瀏覽器共用的，所有分頁一起變）
+        set_annotations: {
+            name: '標註：顯示 / 隱藏 (Show / Hide Annotations)',
+            options: [
+                {
+                    type: 'dropdown',
+                    id: 'mode',
+                    label: '模式',
+                    default: 'toggle',
+                    choices: [
+                        { id: 'toggle', label: '切換 (Toggle)' },
+                        { id: 'show', label: '顯示標註' },
+                        { id: 'hide', label: '隱藏標註' },
+                    ],
+                },
+            ],
+            callback: async (action) => {
+                self.sendCommand({ action: 'set_annotations', params: { mode: action.options.mode } });
+            },
+        },
+        set_floating_ball: {
+            name: '懸浮球：顯示 / 隱藏 (Show / Hide Floating Ball)',
+            options: [
+                {
+                    type: 'dropdown',
+                    id: 'mode',
+                    label: '模式',
+                    default: 'toggle',
+                    choices: [
+                        { id: 'toggle', label: '切換 (Toggle)' },
+                        { id: 'show', label: '顯示懸浮球' },
+                        { id: 'hide', label: '隱藏懸浮球' },
+                    ],
+                },
+            ],
+            callback: async (action) => {
+                self.sendCommand({ action: 'set_ball', params: { mode: action.options.mode } });
+            },
+        },
+        toggle_annotation_sidebar: {
+            name: '標註：開啟 / 關閉側邊欄 (Toggle Annotation Sidebar)',
+            options: [],
+            callback: async () => {
+                self.sendCommand({ action: 'toggle_annotation_sidebar' });
+            },
+        },
+        open_annotations_panel: {
+            name: '標註：開啟「全部標註」面板 (Open All Annotations)',
+            options: [],
+            callback: async () => {
+                self.sendCommand({ action: 'open_annotations_panel' });
+            },
+        },
     });
 }
 //# sourceMappingURL=actions.js.map

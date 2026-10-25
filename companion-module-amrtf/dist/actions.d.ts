@@ -137,5 +137,21 @@ export type ActionsSchema = {
     modal_close: {
         options: Record<string, never>;
     };
+    set_annotations: {
+        options: {
+            mode: string;
+        };
+    };
+    set_floating_ball: {
+        options: {
+            mode: string;
+        };
+    };
+    toggle_annotation_sidebar: {
+        options: Record<string, never>;
+    };
+    open_annotations_panel: {
+        options: Record<string, never>;
+    };
 };
 export declare function UpdateActions(self: ModuleInstance): void;
