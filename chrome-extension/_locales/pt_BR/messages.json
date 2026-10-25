@@ -1,0 +1,797 @@
+{
+  "extensionName": {
+    "message": "Amrita Website: Notes + Companion Bridge",
+    "description": "The name of the extension."
+  },
+  "extensionDescription": {
+    "message": "Highlight and annotate any website, sync with the Amrita app through Google Drive, and control playback and annotation visibility from Bitfocus Companion / Stream Deck.",
+    "description": "The description of the extension."
+  },
+  "sidebarTitle": {
+    "message": "Anotações",
+    "description": "Title for the sidebar."
+  },
+  "noAnnotationsTitle": {
+    "message": "Ainda não há anotações",
+    "description": "Title when no annotations are present."
+  },
+  "noAnnotations": {
+    "message": "Destaque o texto na página para começar!",
+    "description": "Helper text when no annotations are present."
+  },
+  "noComment": {
+    "message": "Sem comentário",
+    "description": "Placeholder for an empty comment."
+  },
+  "annotationOrphanTooltip": {
+    "message": "O destaque não foi encontrado na página atual (o conteúdo pode ter mudado). A ancoragem é tentada novamente a cada visita.",
+    "description": "Tooltip for an annotation whose highlight could not be located on the page."
+  },
+  "annotationOrphanToast": {
+    "message": "Destaque não encontrado nesta página",
+    "description": "Toast shown when clicking an annotation whose highlight could not be located on the page."
+  },
+  "copyAnnotationText": {
+    "message": "Copiar texto",
+    "description": "Tooltip for the button that copies the annotation text to the clipboard."
+  },
+  "textCopiedToClipboard": {
+    "message": "Texto copiado para a área de transferência",
+    "description": "Toast shown after copying annotation text to the clipboard."
+  },
+  "deleteAnnotation": {
+    "message": "Excluir anotação",
+    "description": "Tooltip for the delete annotation button."
+  },
+  "lockSidebarWidth": {
+    "message": "Bloquear a largura da barra lateral",
+    "description": "Tooltip for the lock sidebar button."
+  },
+  "unlockSidebarWidth": {
+    "message": "Desbloquear a largura da barra lateral",
+    "description": "Tooltip for the unlock sidebar button."
+  },
+  "settingsButton": {
+    "message": "Configurações",
+    "description": "Tooltip for the settings button."
+  },
+  "languageLabel": {
+    "message": "Idioma",
+    "description": "Label for the language selector."
+  },
+  "errorLoading": {
+    "message": "Não foi possível carregar as anotações. Por favor, atualize a página.",
+    "description": "Error message when annotations fail to load."
+  },
+  "closeButton": {
+    "message": "Fechar a barra lateral",
+    "description": "Tooltip for the close sidebar button."
+  },
+  "disableOnPageLabel": {
+    "message": "Desativar nesta página",
+    "description": "Label for the disable on page switch."
+  },
+  "disableOnDomainLabel": {
+    "message": "Desativar neste site inteiro",
+    "description": "Label for the disable on domain switch."
+  },
+  "forceBlackColorLabel": {
+    "message": "Forçar texto preto nos destaques",
+    "description": "Label for the force black text switch."
+  },
+  "forceBlackColorTooltip": {
+    "message": "Força todo o texto destacado a ser preto. Isso melhora a legibilidade, mas pode afetar a cor original de vários elementos (exceto links, que agora são distinguíveis).",
+    "description": "Tooltip for the force black text switch."
+  },
+  "editLinkTitle": {
+    "message": "Editar link",
+    "description": "Title for the link editor modal."
+  },
+  "textLabel": {
+    "message": "Texto",
+    "description": "Label for the link text input."
+  },
+  "linkTextPlaceholder": {
+    "message": "Texto do link",
+    "description": "Placeholder for the link text input."
+  },
+  "urlPlaceholder": {
+    "message": "https://exemplo.com",
+    "description": "Placeholder for the link URL input."
+  },
+  "urlLabel": {
+    "message": "URL",
+    "description": "Label for the link URL input."
+  },
+  "unlinkButton": {
+    "message": "Remover link",
+    "description": "Button to remove a link."
+  },
+  "toolbarBold": {
+    "message": "Negrito",
+    "description": "Toolbar button for bold text."
+  },
+  "toolbarItalic": {
+    "message": "Itálico",
+    "description": "Toolbar button for italic text."
+  },
+  "toolbarStrike": {
+    "message": "Riscado",
+    "description": "Toolbar button for strikethrough text."
+  },
+  "toolbarBlockquote": {
+    "message": "Citação",
+    "description": "Toolbar button for blockquote."
+  },
+  "toolbarCodeBlock": {
+    "message": "Bloco de código",
+    "description": "Toolbar button for code block."
+  },
+  "toolbarLink": {
+    "message": "Link",
+    "description": "Toolbar button for link."
+  },
+  "toolbarUnderline": {
+    "message": "Sublinhado",
+    "description": "Toolbar button for underline."
+  },
+  "highlight": {
+    "message": "Destacar",
+    "description": "Action to highlight text."
+  },
+  "underline": {
+    "message": "Sublinhar",
+    "description": "Action to underline text."
+  },
+  "delete": {
+    "message": "Excluir",
+    "description": "Action to delete."
+  },
+  "comment": {
+    "message": "Comentário",
+    "description": "Noun for comment."
+  },
+  "addComment": {
+    "message": "Adicionar comentário",
+    "description": "Action to add a comment."
+  },
+  "commentPlaceholder": {
+    "message": "Adicionar uma nota...",
+    "description": "Placeholder for the comment input."
+  },
+  "paragraphPlaceholder": {
+    "message": "Digite algo...",
+    "description": "Placeholder for a paragraph."
+  },
+  "listPlaceholder": {
+    "message": "Item da lista",
+    "description": "Placeholder for a list item."
+  },
+  "quotePlaceholder": {
+    "message": "Citação",
+    "description": "Placeholder for a quote."
+  },
+  "codePlaceholder": {
+    "message": "Digite o código...",
+    "description": "Placeholder for a code block."
+  },
+  "heading": {
+    "message": "Título",
+    "description": "Noun for heading."
+  },
+  "save": {
+    "message": "Salvar",
+    "description": "Action to save."
+  },
+  "cancel": {
+    "message": "Cancelar",
+    "description": "Action to cancel."
+  },
+  "close": {
+    "message": "Fechar",
+    "description": "Action to close."
+  },
+  "colors_yellow": {
+    "message": "Amarelo",
+    "description": "The color yellow."
+  },
+  "colors_red": {
+    "message": "Vermelho",
+    "description": "The color red."
+  },
+  "colors_green": {
+    "message": "Verde",
+    "description": "The color green."
+  },
+  "colors_blue": {
+    "message": "Azul",
+    "description": "The color blue."
+  },
+  "colors_purple": {
+    "message": "Roxo",
+    "description": "The color purple."
+  },
+  "colors_pink": {
+    "message": "Rosa",
+    "description": "The color pink."
+  },
+  "colors_orange": {
+    "message": "Laranja",
+    "description": "The color orange."
+  },
+  "colors_grey": {
+    "message": "Cinza",
+    "description": "The color grey."
+  },
+  "shortcutsDisabled": {
+    "message": "Atalhos desativados nos campos de entrada.",
+    "description": "Warning message."
+  },
+  "hideUntilNextVisit": {
+    "message": "Ocultar até a próxima visita",
+    "description": "Action to hide the menu."
+  },
+  "disableOnThisPage": {
+    "message": "Desativar nesta página",
+    "description": "Action to disable on the current page."
+  },
+  "disableOnThisWebsite": {
+    "message": "Desativar neste site inteiro",
+    "description": "Action to disable on the current website."
+  },
+  "openSidebar": {
+    "message": "Abrir a barra lateral",
+    "description": "Action to open the sidebar."
+  },
+  "closeSidebar": {
+    "message": "Fechar a barra lateral",
+    "description": "Action to close the sidebar."
+  },
+  "refreshAnnotations": {
+    "message": "Atualizar anotações",
+    "description": "Action to refresh annotations."
+  },
+  "annotationsRefreshed": {
+    "message": "Anotações atualizadas!",
+    "description": "Toast message after refreshing."
+  },
+  "sidebarDarkModeLabel": {
+    "message": "Modo Escuro da Barra Lateral",
+    "description": "Label for the sidebar dark mode switch."
+  },
+  "forceSolidHighlightsLabel": {
+    "message": "Forçar destaques sólidos",
+    "description": "Label for the force solid highlights switch."
+  },
+  "forceSolidHighlightsTooltip": {
+    "message": "Se ativado, os destaques sempre terão uma cor sólida, o que melhora a visibilidade pelo contraste. Se desativado, a cor se adaptará com base no plano de fundo da página.",
+    "description": "Tooltip for the force solid highlights switch."
+  },
+  "syncSectionTitle": {
+    "message": "Sincronização com o Google Drive",
+    "description": "Title of the Google Drive sync section in the settings popup."
+  },
+  "syncDisconnectedText": {
+    "message": "No momento, suas anotações são salvas pela sincronização do Chrome, que tem um limite de cerca de 100 KB. Conecte seu Google Drive para sincronizá-las entre seus dispositivos sem esse limite. Lembre-se de que a sincronização com o Drive só funciona enquanto a sessão estiver ativa.",
+    "description": "Explains Chrome sync limits and that Drive sync only works while signed in."
+  },
+  "syncConnectButton": {
+    "message": "Conectar ao Google Drive",
+    "description": "Button to start the Google Drive sign-in flow."
+  },
+  "syncConnectedLabel": {
+    "message": "Conectado",
+    "description": "Fallback label when the account email is unavailable."
+  },
+  "syncLastSyncLabel": {
+    "message": "Última sincronização: $TIME$",
+    "description": "Shows the time of the last successful sync.",
+    "placeholders": {
+      "TIME": {
+        "content": "$1"
+      }
+    }
+  },
+  "syncStatsLine": {
+    "message": "$PAGES$ páginas · $COUNT$ anotações",
+    "description": "Pages and annotations stored in Drive.",
+    "placeholders": {
+      "PAGES": {
+        "content": "$1"
+      },
+      "COUNT": {
+        "content": "$2"
+      }
+    }
+  },
+  "syncPendingLine": {
+    "message": "$COUNT$ alterações pendentes de envio",
+    "description": "Number of queued changes not yet uploaded.",
+    "placeholders": {
+      "COUNT": {
+        "content": "$1"
+      }
+    }
+  },
+  "syncDisconnectButton": {
+    "message": "Desconectar",
+    "description": "Button to disconnect Google Drive."
+  },
+  "syncDisconnectTitle": {
+    "message": "Desconectar o Google Drive?",
+    "description": "Title of the disconnect confirmation dialog."
+  },
+  "syncDisconnectWarning": {
+    "message": "Uma cópia das suas anotações do Drive será salva neste dispositivo. Até você reconectar, elas não serão sincronizadas entre dispositivos: as alterações e novas anotações ficarão neste computador. Seus dados permanecem intactos no seu Google Drive.",
+    "description": "Warning shown before disconnecting Google Drive."
+  },
+  "syncDisconnectPendingTitle": {
+    "message": "Alterações não sincronizadas",
+    "description": "Title of the unsynced-changes confirmation dialog."
+  },
+  "syncDisconnectPendingWarning": {
+    "message": "Há $COUNT$ alterações que não foram enviadas ao Drive. Elas serão mantidas na cópia local deste dispositivo (e enviadas se você reconectar), mas ainda não estão no seu Google Drive. Continuar?",
+    "description": "Warning when disconnecting with changes not yet uploaded.",
+    "placeholders": {
+      "COUNT": {
+        "content": "$1"
+      }
+    }
+  },
+  "syncDisconnectDoneTitle": {
+    "message": "Google Drive desconectado",
+    "description": "Title of the dialog confirming the disconnection."
+  },
+  "syncDisconnectDoneText": {
+    "message": "Cópia local criada: $COUNT$ anotações de $PAGES$ páginas.",
+    "description": "Result of the local copy created on sign-out.",
+    "placeholders": {
+      "COUNT": {
+        "content": "$1"
+      },
+      "PAGES": {
+        "content": "$2"
+      }
+    }
+  },
+  "syncCopyFromCacheNote": {
+    "message": "Sem conexão: a cópia foi criada a partir dos dados em cache deste dispositivo e pode não incluir alterações recentes de outros dispositivos.",
+    "description": "Note when the local copy was built offline from cached data."
+  },
+  "syncQuotaErrorTitle": {
+    "message": "Espaço local insuficiente",
+    "description": "Title when the local copy does not fit in local storage."
+  },
+  "syncQuotaErrorText": {
+    "message": "A cópia local não cabe no armazenamento deste dispositivo, então a sessão não foi encerrada. Seus dados permanecem intactos no Google Drive.",
+    "description": "Explains the sign-out was aborted because the copy does not fit."
+  },
+  "syncNeedsReauthText": {
+    "message": "O acesso ao Google Drive expirou ou foi revogado. Reconecte para retomar a sincronização.",
+    "description": "Shown when Drive access expired or was revoked."
+  },
+  "syncReconnectButton": {
+    "message": "Reconectar",
+    "description": "Button to re-run the sign-in flow after a revocation."
+  },
+  "syncPromoTitle": {
+    "message": "Sincronize suas anotações com o Google Drive",
+    "description": "Title of the one-time promo modal."
+  },
+  "syncModalConnect": {
+    "message": "Conectar",
+    "description": "Primary button of the promo modal."
+  },
+  "syncModalNotNow": {
+    "message": "Agora não",
+    "description": "Secondary button of the promo modal."
+  },
+  "syncModalContinue": {
+    "message": "Continuar",
+    "description": "Primary button to proceed despite a warning."
+  },
+  "syncConnecting": {
+    "message": "Conectando…",
+    "description": "Button label while the sign-in flow is running."
+  },
+  "syncConnectedToast": {
+    "message": "Google Drive conectado",
+    "description": "Toast after a successful connection."
+  },
+  "syncConnectFailedToast": {
+    "message": "Não foi possível conectar ao Google Drive",
+    "description": "Toast when the sign-in flow fails or is cancelled."
+  },
+  "syncGenericErrorToast": {
+    "message": "A operação com o Google Drive falhou",
+    "description": "Toast for an unexpected Drive error."
+  },
+  "openAnnotationsPanel": {
+    "message": "Ver todas as minhas anotações",
+    "description": "Sidebar button and toolbar-icon context menu entry that opens the global annotations panel."
+  },
+  "panelPageTitle": {
+    "message": "Todas as anotações · Marca-texto Quantum PRO",
+    "description": "Browser tab title of the annotations panel."
+  },
+  "panelTitle": {
+    "message": "Todas as anotações",
+    "description": "Heading of the annotations panel."
+  },
+  "panelBackendTooltip": {
+    "message": "Onde suas anotações ficam armazenadas",
+    "description": "Tooltip of the badge that shows where annotations are stored."
+  },
+  "panelBackendSync": {
+    "message": "Sincronização do Chrome",
+    "description": "Badge: annotations stored in chrome.storage.sync."
+  },
+  "panelBackendDrive": {
+    "message": "Google Drive",
+    "description": "Badge: annotations stored in Google Drive."
+  },
+  "panelRefresh": {
+    "message": "Atualizar",
+    "description": "Button that reloads all annotations."
+  },
+  "panelExport": {
+    "message": "Exportar",
+    "description": "Button that opens the export menu."
+  },
+  "panelExportHint": {
+    "message": "Exporta as anotações exibidas no momento.",
+    "description": "Hint inside the export menu."
+  },
+  "panelExportMarkdown": {
+    "message": "Markdown (.md)",
+    "description": "Export menu item: Markdown file."
+  },
+  "panelExportJson": {
+    "message": "JSON (.json)",
+    "description": "Export menu item: JSON file."
+  },
+  "panelDarkMode": {
+    "message": "Modo escuro",
+    "description": "Tooltip of the dark mode toggle."
+  },
+  "panelCacheBanner": {
+    "message": "Não foi possível acessar o Google Drive. Exibindo a cópia local, que pode não incluir alterações recentes de outros dispositivos.",
+    "description": "Banner shown when Drive is unreachable and the local cache is displayed."
+  },
+  "panelSearchPlaceholder": {
+    "message": "Buscar em citações, comentários e páginas",
+    "description": "Placeholder of the search box."
+  },
+  "panelFilterColors": {
+    "message": "Cores",
+    "description": "Filter section title: colors."
+  },
+  "panelFilterType": {
+    "message": "Tipo",
+    "description": "Filter section title: annotation type."
+  },
+  "panelTypeAll": {
+    "message": "Todas",
+    "description": "Type filter: all annotations."
+  },
+  "panelTypeHighlight": {
+    "message": "Destaques",
+    "description": "Type filter: highlights."
+  },
+  "panelTypeUnderline": {
+    "message": "Sublinhados",
+    "description": "Type filter: underlines."
+  },
+  "panelTypeNote": {
+    "message": "Notas de página",
+    "description": "Type filter: page notes."
+  },
+  "panelFilterDate": {
+    "message": "Data",
+    "description": "Filter section title: date."
+  },
+  "panelDateAll": {
+    "message": "Qualquer data",
+    "description": "Date filter: any time."
+  },
+  "panelDateToday": {
+    "message": "Hoje",
+    "description": "Date filter: today."
+  },
+  "panelDateWeek": {
+    "message": "Últimos 7 dias",
+    "description": "Date filter: last 7 days."
+  },
+  "panelDateMonth": {
+    "message": "Últimos 30 dias",
+    "description": "Date filter: last 30 days."
+  },
+  "panelDateYear": {
+    "message": "Este ano",
+    "description": "Date filter: this year."
+  },
+  "panelOnlyWithComment": {
+    "message": "Somente com comentário",
+    "description": "Checkbox: show only annotations that have a comment."
+  },
+  "panelFilterSites": {
+    "message": "Sites",
+    "description": "Filter section title: sites (domains)."
+  },
+  "panelClearFilters": {
+    "message": "Limpar filtros",
+    "description": "Button that resets all filters."
+  },
+  "panelSortLabel": {
+    "message": "Ordenar por",
+    "description": "Label of the sort selector."
+  },
+  "panelSortNewest": {
+    "message": "Mais recentes",
+    "description": "Sort option: newest first."
+  },
+  "panelSortOldest": {
+    "message": "Mais antigas",
+    "description": "Sort option: oldest first."
+  },
+  "panelSortPage": {
+    "message": "Página A–Z",
+    "description": "Sort option: page title A to Z."
+  },
+  "panelSortMostAnnotated": {
+    "message": "Mais anotadas",
+    "description": "Sort option: pages with most annotations first."
+  },
+  "panelCollapseAll": {
+    "message": "Recolher tudo",
+    "description": "Button that collapses every page group."
+  },
+  "panelExpandAll": {
+    "message": "Expandir tudo",
+    "description": "Button that expands every page group."
+  },
+  "panelLoading": {
+    "message": "Carregando suas anotações…",
+    "description": "Loading state text."
+  },
+  "panelLoadFailed": {
+    "message": "Não foi possível carregar suas anotações. Tente novamente.",
+    "description": "Toast when annotations could not be loaded."
+  },
+  "panelEmptyTitle": {
+    "message": "Nenhuma anotação ainda",
+    "description": "Empty state title (no annotations at all)."
+  },
+  "panelEmptyText": {
+    "message": "Destaque um texto em qualquer página da web e ele aparecerá aqui.",
+    "description": "Empty state text (no annotations at all)."
+  },
+  "panelNoResultsTitle": {
+    "message": "Nada encontrado",
+    "description": "Title when filters match nothing."
+  },
+  "panelNoResultsText": {
+    "message": "Tente outra busca ou limpe os filtros.",
+    "description": "Text when filters match nothing."
+  },
+  "panelResultCount": {
+    "message": "Mostrando $1 de $2 anotações",
+    "description": "Result counter. $1 = shown, $2 = total."
+  },
+  "panelStats": {
+    "message": "$1 anotações · $2 páginas · $3 sites",
+    "description": "Totals line. $1 = annotations, $2 = pages, $3 = sites."
+  },
+  "panelStorageUsage": {
+    "message": "Armazenamento de sincronização do Chrome: $1% usado",
+    "description": "Chrome sync storage usage. $1 = percentage."
+  },
+  "panelUntitledPage": {
+    "message": "Página sem título",
+    "description": "Fallback title for pages without a stored title."
+  },
+  "panelOpenPage": {
+    "message": "Abrir página",
+    "description": "Tooltip: open the annotated page."
+  },
+  "panelGoToHighlight": {
+    "message": "Ir para o destaque na página",
+    "description": "Tooltip: open the page scrolled to the highlight."
+  },
+  "panelAddPageNote": {
+    "message": "Adicionar nota de página",
+    "description": "Tooltip: add a page note (annotation without anchor)."
+  },
+  "panelPageNoteLabel": {
+    "message": "Nota de página",
+    "description": "Label shown on page notes (panel and sidebar)."
+  },
+  "panelCopyMarkdown": {
+    "message": "Copiar como Markdown",
+    "description": "Tooltip: copy the page annotations as Markdown."
+  },
+  "panelCopied": {
+    "message": "Copiado para a área de transferência",
+    "description": "Toast after copying to the clipboard."
+  },
+  "panelDeletePage": {
+    "message": "Excluir todas as anotações desta página",
+    "description": "Tooltip: delete every annotation of the page."
+  },
+  "panelConfirmDelete": {
+    "message": "Confirmar?",
+    "description": "Label of a delete button waiting for a second click."
+  },
+  "panelEditComment": {
+    "message": "Editar comentário",
+    "description": "Tooltip: edit the comment."
+  },
+  "panelSave": {
+    "message": "Salvar",
+    "description": "Save button of the comment editor."
+  },
+  "panelCancel": {
+    "message": "Cancelar",
+    "description": "Cancel button of the comment editor."
+  },
+  "panelChangeColor": {
+    "message": "Mudar cor",
+    "description": "Tooltip: change the annotation color."
+  },
+  "panelSetHighlight": {
+    "message": "Mudar para destaque",
+    "description": "Tooltip: switch the annotation to a highlight."
+  },
+  "panelSetUnderline": {
+    "message": "Mudar para sublinhado",
+    "description": "Tooltip: switch the annotation to an underline."
+  },
+  "panelSaved": {
+    "message": "Salvo",
+    "description": "Toast after saving."
+  },
+  "panelNoteCreated": {
+    "message": "Nota de página criada",
+    "description": "Toast after creating a page note."
+  },
+  "panelSaveFailed": {
+    "message": "Algo deu errado. Tente novamente.",
+    "description": "Toast when an operation fails."
+  },
+  "panelDeleted": {
+    "message": "Anotação excluída",
+    "description": "Toast after deleting one annotation."
+  },
+  "panelPageDeleted": {
+    "message": "$1 anotações excluídas",
+    "description": "Toast after deleting a page. $1 = number of annotations."
+  },
+  "panelEditedOn": {
+    "message": "editado em $1",
+    "description": "Suffix with the last edit date. $1 = date."
+  },
+  "panelLinkPrompt": {
+    "message": "URL do link",
+    "description": "Prompt text when inserting a link in the comment editor."
+  },
+  "panelToolbarBulletList": {
+    "message": "Lista com marcadores",
+    "description": "Toolbar tooltip: bullet list."
+  },
+  "panelToolbarOrderedList": {
+    "message": "Lista numerada",
+    "description": "Toolbar tooltip: numbered list."
+  },
+  "panelExportTitle": {
+    "message": "Anotações do Marca-texto Quantum PRO",
+    "description": "Title of the exported Markdown document."
+  },
+  "panelExportedOn": {
+    "message": "Exportado em $1",
+    "description": "Export date line. $1 = date."
+  },
+  "panelColorYellow": {
+    "message": "Amarelo",
+    "description": "Color name."
+  },
+  "panelColorRed": {
+    "message": "Vermelho",
+    "description": "Color name."
+  },
+  "panelColorGreen": {
+    "message": "Verde",
+    "description": "Color name."
+  },
+  "panelColorBlue": {
+    "message": "Azul",
+    "description": "Color name."
+  },
+  "panelColorPurple": {
+    "message": "Roxo",
+    "description": "Color name."
+  },
+  "panelColorPink": {
+    "message": "Rosa",
+    "description": "Color name."
+  },
+  "panelColorOrange": {
+    "message": "Laranja",
+    "description": "Color name."
+  },
+  "panelColorGrey": {
+    "message": "Cinza",
+    "description": "Color name."
+  },
+  "privacyLink": {
+    "message": "Política de privacidade",
+    "description": "Header link of the welcome page that opens the privacy policy."
+  },
+  "disclosureTitleNew": {
+    "message": "Como o Marca-texto Quantum PRO trata seus dados",
+    "description": "Title of the data-practices notice shown the first time (welcome page, in-page notice, sidebar, panel)."
+  },
+  "disclosureTitleUpdate": {
+    "message": "Esta atualização muda como seus dados são tratados",
+    "description": "Title of the data-practices notice after an update that changed the practices."
+  },
+  "disclosureIntroNew": {
+    "message": "Claro e curto, antes do seu primeiro destaque:",
+    "description": "Intro line of the first-time notice."
+  },
+  "disclosureIntroUpdate": {
+    "message": "A versão $1 muda o que a extensão guarda ou onde. Em resumo:",
+    "description": "Intro line of the update notice. $1 = practices version."
+  },
+  "disclosureChangesHeading": {
+    "message": "O que mudou",
+    "description": "Heading of the list of changes in the update notice."
+  },
+  "disclosurePracticesHeading": {
+    "message": "O que a extensão guarda, e onde",
+    "description": "Heading of the list describing what is stored and where."
+  },
+  "disclosureItemStores": {
+    "message": "O texto que você destaca, algumas palavras ao redor, o endereço e o título da página, e as notas que você escreve.",
+    "description": "Data-practices item: what the extension stores."
+  },
+  "disclosureItemWhere": {
+    "message": "Tudo fica no seu navegador, onde o Chrome pode sincronizá-lo com sua conta do Google. A sincronização com o Google Drive é opcional e só começa se você mesmo a conectar.",
+    "description": "Data-practices item: where the data lives and that Drive sync is opt-in."
+  },
+  "disclosureItemNever": {
+    "message": "Nada é enviado ao desenvolvedor. Não há análises nem anúncios, e seus dados nunca são vendidos nem compartilhados.",
+    "description": "Data-practices item: nothing goes to the developer, no analytics or ads."
+  },
+  "disclosureItemControl": {
+    "message": "Você pode editar, exportar ou excluir tudo a qualquer momento pela barra lateral e pelo painel Todas as anotações.",
+    "description": "Data-practices item: the user can edit, export or delete everything."
+  },
+  "disclosureChangeTitle": {
+    "message": "As novas anotações também guardam o título da página, para que o painel Todas as anotações possa identificar cada página.",
+    "description": "Change in 2026.0905.2: page title stored with new annotations."
+  },
+  "disclosureChangeFavicon": {
+    "message": "O painel mostra o ícone de cada site a partir do cache local de favicons do Chrome; nenhum site é contatado para isso.",
+    "description": "Change in 2026.0905.2: favicons from Chrome's local cache in the panel."
+  },
+  "disclosureLink": {
+    "message": "Ler a política de privacidade completa",
+    "description": "Link to the full privacy policy."
+  },
+  "disclosureAccept": {
+    "message": "Entendi",
+    "description": "Button that records the user's acknowledgement of the data practices."
+  },
+  "disclosureWelcomeAccepted": {
+    "message": "Obrigado! Não perguntaremos de novo, a menos que nossas práticas de dados mudem.",
+    "description": "Confirmation shown on the welcome page after accepting."
+  },
+  "panelPrivacyNoteSync": {
+    "message": "Suas anotações ficam no seu navegador e o Chrome as sincroniza com sua conta do Google. Nada é enviado ao desenvolvedor.",
+    "description": "Permanent privacy note in the panel when annotations live in Chrome sync."
+  },
+  "panelPrivacyNoteDrive": {
+    "message": "Suas anotações ficam em uma pasta oculta do seu próprio Google Drive, acessível apenas por esta extensão. Nada é enviado ao desenvolvedor.",
+    "description": "Permanent privacy note in the panel when annotations live in Google Drive."
+  }
+}

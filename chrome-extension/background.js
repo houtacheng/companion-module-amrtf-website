@@ -1,887 +1,1071 @@
-// AMRTF 大慈恩官網 - Companion Bridge Background Service Worker
-// 在 Extension 背景獨立環境執行，不受網頁 HTTPS Mixed Content 或 CSP 阻擋
+// Helpers puros compartidos con el content script (QHP.shared): merge LWW
+// doble, tombstones, cuerpos de página y reensamblado de chunks.
+importScripts('storage-backend.js', 'disclosure.js');
+importScripts('companion-bridge.js');   // [整合版] Companion 橋接（同一個背景程式）
 
-try {
-  importScripts('mqtt.min.js');
-} catch (e) {
-  console.error('[AMRTF-Bridge-BG] 載入 mqtt.min.js 失敗:', e);
-}
-
-let ws = null;
-let wsUrl = 'ws://127.0.0.1:9999';
-let reconnectTimer = null;
-let heartbeatTimer = null;
-let activeTabId = null;
-const connectedTabs = new Map();
-
-// MQTT 狀態與設定
-let mqttClient = null;
-let mqttEnabled = false;
-let mqttBrokerUrl = 'ws://127.0.0.1:1884';
-let mqttTopicPrefix = 'amrtf';
-let mqttUsername = '';
-let mqttPassword = '';
-let mqttLastError = '';
-
-console.log('[AMRTF-Bridge-BG] Background Service Worker 啟動 (v1.1.0)');
-
-// 1. 初始化讀取設定
-chrome.storage.local.get(
-  ['wsUrl', 'mqttEnabled', 'mqttBrokerUrl', 'mqttTopicPrefix', 'mqttUsername', 'mqttPassword'],
-  (res) => {
-    if (res.wsUrl) {
-      wsUrl = res.wsUrl;
-    }
-    connectWebSocket();
-
-    mqttEnabled = !!res.mqttEnabled;
-    if (res.mqttBrokerUrl) mqttBrokerUrl = res.mqttBrokerUrl;
-    if (res.mqttTopicPrefix) mqttTopicPrefix = res.mqttTopicPrefix;
-    if (res.mqttUsername !== undefined) mqttUsername = res.mqttUsername;
-    if (res.mqttPassword !== undefined) mqttPassword = res.mqttPassword;
-
-    if (mqttEnabled) {
-      connectMqtt();
-    }
+chrome.runtime.onInstalled.addListener(async (details) => {
+  if (details.reason === "install") {
+    // [大慈恩版] 不開歡迎頁；也不要在第一次打開側邊欄時跳出「連線雲端硬碟」推廣視窗
+    await chrome.storage.local.set({ 'qhp-drive-promo-shown': true });
+    await chrome.storage.sync.set({ 'highlighter-settings': { useDarkText: true } });
   }
-);
-
-// 自動注入與探索現有大慈恩分頁
-function scanAllAmrtfTabs() {
-  chrome.tabs.query({}, (allTabs) => {
-    if (!allTabs) return;
-
-    const amrtfTabs = allTabs.filter((t) => t.url && t.url.includes('amrtf.org'));
-
-    // 清理已不存在的分頁
-    const currentTabIds = new Set(amrtfTabs.map((t) => t.id));
-    for (const id of connectedTabs.keys()) {
-      if (!currentTabIds.has(id)) {
-        connectedTabs.delete(id);
-      }
-    }
-
-    if (amrtfTabs.length === 0) {
-      if (activeTabId && !currentTabIds.has(activeTabId)) {
-        activeTabId = null;
-      }
-      broadcastTabsList();
-      return;
-    }
-
-    for (const tab of amrtfTabs) {
-      if (!tab.id) continue;
-
-      if (!connectedTabs.has(tab.id)) {
-        connectedTabs.set(tab.id, {
-          tabId: tab.id,
-          windowId: tab.windowId,
-          lessonNumber: '',
-          lessonTitle: tab.title || '大慈恩分頁',
-          isFocused: tab.active,
-          lastState: null,
-        });
-
-        // 嘗試注入 content.js (若尚未注入)
-        chrome.scripting
-          .executeScript({
-            target: { tabId: tab.id },
-            files: ['content.js'],
-          })
-          .catch(() => {});
-      } else {
-        const info = connectedTabs.get(tab.id);
-        info.windowId = tab.windowId;
-        if (tab.title && (!info.lessonTitle || info.lessonTitle === '大慈恩分頁')) {
-          info.lessonTitle = tab.title;
-        }
-      }
-
-      // 要求分頁回報最新狀態與標題
-      chrome.tabs.sendMessage(tab.id, { type: 'QUERY_STATUS' }, (res) => {
-        if (!chrome.runtime.lastError && res) {
-          const info = connectedTabs.get(tab.id);
-          if (info) {
-            if (res.lessonTitle) info.lessonTitle = res.lessonTitle;
-            if (res.lessonNumber) info.lessonNumber = res.lessonNumber;
-            info.isFocused = !!res.isFocused;
-          }
-        }
-      });
-    }
-
-    if (!activeTabId || !connectedTabs.has(activeTabId)) {
-      const activeInWindow = amrtfTabs.find((t) => t.active);
-      activeTabId = activeInWindow ? activeInWindow.id : amrtfTabs[0].id;
-    }
-
-    broadcastTabsList();
-  });
-}
-
-// 定期主動掃描以確保分頁清單絕對同步 (每 2 秒)
-setInterval(scanAllAmrtfTabs, 2000);
-
-// 2. WebSocket 連線管理
-function connectWebSocket() {
-  if (ws) {
+  if (details.reason === "update") {
+    // Política CWS 2026: avisar de cambios en las prácticas de datos tras una
+    // actualización. Deja marcado que hay que mostrar "qué cambió".
+    QHP.disclosure.markUpdate();
+  }
+  if (details.reason === "install" || details.reason === "update") {
+    installPanelContextMenu();
+    const url = chrome.runtime.getURL("excluded-websites.json");
     try {
-      ws.onclose = null;
-      ws.close();
-    } catch (e) {}
-    ws = null;
-  }
+      const response = await fetch(url);
+      const { version, sites } = await response.json();
 
-  clearTimeout(reconnectTimer);
-  clearInterval(heartbeatTimer);
+      const { excluded_websites_version, disabledSites = [] } = await chrome.storage.sync.get([
+          "excluded_websites_version",
+          "disabledSites",
+        ]);
 
-  try {
-    console.log(`[AMRTF-Bridge-BG] 正在連線至 Companion: ${wsUrl}`);
-    ws = new WebSocket(wsUrl);
-
-    ws.onopen = () => {
-      console.log(`[AMRTF-Bridge-BG] WebSocket 連線成功 (${wsUrl})！`);
-      updateBadge(true);
-      scanAllAmrtfTabs();
-      broadcastTabsList();
-      reportActiveTabState();
-
-      // 每 5 秒發送心跳保持連線暢通
-      heartbeatTimer = setInterval(() => {
-        if (ws && ws.readyState === WebSocket.OPEN) {
-          try {
-            ws.send(JSON.stringify({ type: 'PING', timestamp: Date.now() }));
-            broadcastTabsList();
-          } catch (e) {}
-        }
-      }, 5000);
-    };
-
-    ws.onmessage = (event) => {
-      try {
-        const msg = JSON.parse(event.data);
-        if (msg.type === 'PONG' || msg.type === 'INIT_ACK') {
-          return;
-        }
-        console.log('[AMRTF-Bridge-BG] 收到 Companion 指令:', msg);
-        processCommand(msg);
-      } catch (err) {
-        console.error('[AMRTF-Bridge-BG] 解析指令失敗:', err);
-      }
-    };
-
-    ws.onclose = (event) => {
-      console.warn(`[AMRTF-Bridge-BG] WebSocket 斷線 (${wsUrl}, 代碼: ${event.code})，3 秒後重連...`);
-      ws = null;
-      updateBadge(false);
-      clearInterval(heartbeatTimer);
-      reconnectTimer = setTimeout(connectWebSocket, 3000);
-    };
-
-    ws.onerror = (err) => {
-      console.error('[AMRTF-Bridge-BG] WebSocket 連線錯誤:', err);
-    };
-  } catch (e) {
-    console.error('[AMRTF-Bridge-BG] 建立 WebSocket 失敗:', e);
-    updateBadge(false);
-    clearInterval(heartbeatTimer);
-    reconnectTimer = setTimeout(connectWebSocket, 3000);
-  }
-}
-
-function updateBadge(connected) {
-  if (connected) {
-    chrome.action.setBadgeText({ text: 'OK' });
-    chrome.action.setBadgeBackgroundColor({ color: '#1e8e3e' });
-  } else {
-    chrome.action.setBadgeText({ text: '!' });
-    chrome.action.setBadgeBackgroundColor({ color: '#d93025' });
-  }
-}
-
-// 2b. 統一指令處理 (支援 Companion WebSocket 與 MQTT)
-function processCommand(msg) {
-  if (!msg || !msg.action) return;
-
-  if (msg.action === 'focus_active_tab') {
-    activateTab(activeTabId);
-    return;
-  }
-
-  if (msg.action === 'cycle_next_tab') {
-    cycleToNextTab();
-    return;
-  }
-
-  if (msg.action === 'select_tab_index') {
-    selectTabByIndex(msg.index);
-    return;
-  }
-
-  // 指定播放講次：新增頁面並切換呈現
-  if (msg.action === 'goto_lesson' || msg.action === 'open_new_tab') {
-    const params = msg.params || {};
-    const course = params.course && params.course !== 'current' ? params.course : 'clear-moonlight-great-ocean';
-    const lesson = parseInt(params.lesson, 10) || 1;
-    const pad = String(lesson).padStart(4, '0');
-    const url = `https://www.amrtf.org/zh-hant/${course}-${pad}/`;
-    openNewTabAndFocus(url);
-    return;
-  }
-
-  // 開啟專題首頁：新增頁面並切換呈現
-  if (msg.action === 'open_course_home') {
-    const params = msg.params || {};
-    const course = params.course || 'clear-moonlight-great-ocean';
-    const url = `https://www.amrtf.org/zh-hant/${course}/`;
-    openNewTabAndFocus(url);
-    return;
-  }
-
-  if (msg.action === 'toggle_fullscreen') {
-    toggleWindowFullscreen();
-    return;
-  }
-
-  dispatchCommandToTabs(msg);
-}
-
-// 2c. MQTT 客戶端管理與雙向通訊
-function disconnectMqtt() {
-  if (mqttClient) {
-    try {
-      mqttClient.end(true);
-    } catch (e) {}
-    mqttClient = null;
-  }
-}
-
-function connectMqtt() {
-  disconnectMqtt();
-  mqttLastError = '';
-  if (!mqttEnabled) return;
-
-  if (typeof mqtt === 'undefined' || !mqtt.connect) {
-    mqttLastError = 'MQTT 套件尚未載入，無法連線';
-    console.error('[AMRTF-Bridge-BG] ' + mqttLastError);
-    return;
-  }
-
-  // 協定與通訊埠檢查：瀏覽器擴充套件環境僅支援 WebSocket (ws:// / wss://)
-  if (mqttBrokerUrl.startsWith('mqtt://') || mqttBrokerUrl.startsWith('tcp://')) {
-    mqttBrokerUrl = mqttBrokerUrl.replace(/^(mqtt|tcp):\/\//, 'ws://');
-  } else if (mqttBrokerUrl.startsWith('mqtts://')) {
-    mqttBrokerUrl = mqttBrokerUrl.replace(/^mqtts:\/\//, 'wss://');
-  }
-  if (mqttBrokerUrl.includes(':1883')) {
-    mqttBrokerUrl = mqttBrokerUrl.replace(':1883', ':1884');
-  } else if (mqttBrokerUrl.includes(':8883')) {
-    mqttBrokerUrl = mqttBrokerUrl.replace(':8883', ':8884');
-  }
-
-  console.log(`[AMRTF-Bridge-BG] 正在連線至 MQTT Broker: ${mqttBrokerUrl}`);
-  try {
-    const opts = {
-      reconnectPeriod: 4000,
-      connectTimeout: 8000,
-    };
-    if (mqttUsername) opts.username = mqttUsername;
-    if (mqttPassword) opts.password = mqttPassword;
-
-    mqttClient = mqtt.connect(mqttBrokerUrl, opts);
-
-    mqttClient.on('connect', () => {
-      mqttLastError = '';
-      console.log(`[AMRTF-Bridge-BG] MQTT 連線成功 (${mqttBrokerUrl})！主題前綴: ${mqttTopicPrefix}`);
-      const prefix = mqttTopicPrefix.replace(/\/+$/, '');
-
-      mqttClient.subscribe([
-        `${prefix}/command`,
-        `${prefix}/control/#`,
-      ], (err) => {
-        if (err) console.error('[AMRTF-Bridge-BG] MQTT 訂閱主題失敗:', err);
-      });
-
-      mqttClient.publish(`${prefix}/status/connection`, 'connected', { retain: true });
-      reportActiveTabState();
-    });
-
-    mqttClient.on('message', (topic, payloadBuffer) => {
-      try {
-        const payloadStr = payloadBuffer.toString().trim();
-        handleMqttMessage(topic, payloadStr);
-      } catch (err) {
-        console.error('[AMRTF-Bridge-BG] 處理 MQTT 訊息失敗:', err);
-      }
-    });
-
-    mqttClient.on('error', (err) => {
-      const errMsg = err && err.message ? err.message : String(err);
-      console.error('[AMRTF-Bridge-BG] MQTT 錯誤:', err);
-      if (errMsg.includes('net module') || errMsg.includes('TCP') || mqttBrokerUrl.includes(':1883')) {
-        mqttLastError = '連線失敗：瀏覽器僅支援 WebSocket 協定 (預設埠 1884)，不支援純 TCP (1883 埠)。';
-      } else {
-        mqttLastError = `MQTT 錯誤: ${errMsg}`;
-      }
-    });
-
-    mqttClient.on('close', () => {
-      console.warn('[AMRTF-Bridge-BG] MQTT 連線中斷');
-    });
-  } catch (err) {
-    const errMsg = err && err.message ? err.message : String(err);
-    console.error('[AMRTF-Bridge-BG] 建立 MQTT 客戶端失敗:', err);
-    if (errMsg.includes('net module') || mqttBrokerUrl.includes(':1883')) {
-      mqttLastError = '連線失敗：瀏覽器環境不支援純 TCP (1883 埠)，請使用 WebSocket (預設埠 1884)。';
-    } else {
-      mqttLastError = `連線初始化失敗: ${errMsg}`;
-    }
-  }
-}
-
-function handleMqttMessage(topic, payloadStr) {
-  const prefix = mqttTopicPrefix.replace(/\/+$/, '');
-  console.log(`[AMRTF-Bridge-BG] 收到 MQTT 訊息: ${topic} => ${payloadStr}`);
-
-  // 1. JSON 格式指令: ${prefix}/command
-  if (topic === `${prefix}/command`) {
-    try {
-      const msg = JSON.parse(payloadStr);
-      processCommand(msg);
-    } catch (e) {
-      processCommand({ action: payloadStr });
-    }
-    return;
-  }
-
-  // 2. 主題式控制: ${prefix}/control/{action}
-  if (topic.startsWith(`${prefix}/control/`)) {
-    const subTopic = topic.substring(`${prefix}/control/`.length);
-    switch (subTopic) {
-      case 'play':
-        processCommand({ action: 'play' });
-        break;
-      case 'pause':
-      case 'stop':
-        processCommand({ action: 'pause' });
-        break;
-      case 'toggle_play':
-        processCommand({ action: 'toggle_play' });
-        break;
-      case 'seek_relative': {
-        const seconds = parseFloat(payloadStr) || 0;
-        processCommand({ action: 'seek_relative', params: { seconds } });
-        break;
-      }
-      case 'seek_to': {
-        processCommand({ action: 'seek_to', params: { seconds: payloadStr } });
-        break;
-      }
-      case 'playback_rate': {
-        const rate = parseFloat(payloadStr) || 1.0;
-        processCommand({ action: 'set_playback_rate', params: { rate } });
-        break;
-      }
-      case 'theme': {
-        processCommand({ action: 'set_theme', params: { theme: payloadStr } });
-        break;
-      }
-      case 'speech_mode': {
-        const enabled = payloadStr === 'toggle' ? undefined : (payloadStr === 'true' || payloadStr === '1' || payloadStr === 'on');
-        processCommand({ action: 'toggle_speech_mode', params: { enabled } });
-        break;
-      }
-      case 'scroll_mode': {
-        const mode = parseInt(payloadStr, 10) || 0;
-        processCommand({ action: 'set_scroll_mode', params: { mode } });
-        break;
-      }
-      case 'font_size': {
-        const size = parseFloat(payloadStr) || 16;
-        processCommand({ action: 'set_font_size', params: { size } });
-        break;
-      }
-      case 'fullscreen':
-        toggleWindowFullscreen();
-        break;
-      case 'cycle_next_tab':
-        cycleToNextTab();
-        break;
-      case 'focus_active_tab':
-        activateTab(activeTabId);
-        break;
-      case 'goto_lesson': {
-        try {
-          const p = JSON.parse(payloadStr);
-          processCommand({ action: 'goto_lesson', params: p });
-        } catch (e) {
-          processCommand({ action: 'goto_lesson', params: { lesson: parseInt(payloadStr, 10) || 1 } });
-        }
-        break;
-      }
-      case 'open_course_home':
-        processCommand({ action: 'open_course_home', params: { course: payloadStr || 'clear-moonlight-great-ocean' } });
-        break;
-      case 'loop_segment': {
-        try {
-          const p = JSON.parse(payloadStr);
-          processCommand({ action: 'toggle_loop_segment', params: p });
-        } catch (e) {
-          processCommand({ action: 'toggle_loop_segment', params: { target: payloadStr || 'master_quote' } });
-        }
-        break;
-      }
-      case 'jump_to_master_start':
-        processCommand({ action: 'jump_to_master_start' });
-        break;
-      case 'open_modal_video': {
-        try {
-          const p = JSON.parse(payloadStr);
-          processCommand({ action: 'open_modal_video', params: p });
-        } catch (e) {
-          processCommand({ action: 'open_modal_video', params: { videoType: payloadStr } });
-        }
-        break;
-      }
-      case 'close_modal_video':
-        processCommand({ action: 'close_modal_video' });
-        break;
-      default:
-        processCommand({ action: subTopic });
-        break;
-    }
-  }
-}
-
-function publishStateToMqtt(stateData, tabId) {
-  if (!mqttClient || !mqttClient.connected) return;
-
-  const prefix = mqttTopicPrefix.replace(/\/+$/, '');
-  const payload = {
-    ...stateData,
-    tabId: tabId,
-    timestamp: Date.now(),
-  };
-
-  try {
-    // 1. 完整 JSON 狀態
-    mqttClient.publish(`${prefix}/state`, JSON.stringify(payload), { qos: 0 });
-
-    // 2. 個別主題狀態（推播目前播放文字/字幕等）
-    mqttClient.publish(`${prefix}/status/playing`, String(!!stateData.playing), { qos: 0 });
-    mqttClient.publish(`${prefix}/status/current_time`, String(stateData.currentTimeStr || '00:00'), { qos: 0 });
-    mqttClient.publish(`${prefix}/status/current_time_seconds`, String(stateData.currentTime || 0), { qos: 0 });
-    mqttClient.publish(`${prefix}/status/duration`, String(stateData.durationStr || '00:00'), { qos: 0 });
-    mqttClient.publish(`${prefix}/status/lesson_number`, String(stateData.lessonNumber || ''), { qos: 0 });
-    mqttClient.publish(`${prefix}/status/lesson_title`, String(stateData.lessonTitle || ''), { qos: 0 });
-    mqttClient.publish(`${prefix}/status/current_subtitle`, String(stateData.currentSubtitle || ''), { qos: 0 });
-    mqttClient.publish(`${prefix}/status/theme`, String(stateData.theme || 'dark'), { qos: 0 });
-    mqttClient.publish(`${prefix}/status/speech_mode`, String(!!stateData.speechMode), { qos: 0 });
-    mqttClient.publish(`${prefix}/status/scroll_mode`, String(stateData.scrollMode ?? 0), { qos: 0 });
-    mqttClient.publish(`${prefix}/status/looping`, String(!!stateData.looping), { qos: 0 });
-  } catch (e) {
-    console.error('[AMRTF-Bridge-BG] MQTT 發送狀態失敗:', e);
-  }
-}
-
-// 3. 多分頁管理與切換聚焦
-function broadcastTabsList() {
-  const tabs = Array.from(connectedTabs.values()).map((t) => ({
-    id: t.tabId,
-    lessonNumber: t.lessonNumber || '',
-    lessonTitle: t.lessonTitle || '',
-    isFocused: t.tabId === activeTabId,
-  }));
-
-  if (mqttClient && mqttClient.connected) {
-    const prefix = mqttTopicPrefix.replace(/\/+$/, '');
-    try {
-      mqttClient.publish(`${prefix}/status/tabs_count`, String(tabs.length), { qos: 0 });
-    } catch (e) {}
-  }
-
-  if (!ws || ws.readyState !== WebSocket.OPEN) return;
-
-  try {
-    ws.send(
-      JSON.stringify({
-        type: 'TABS_LIST_UPDATE',
-        tabsCount: tabs.length,
-        activeTabId: activeTabId,
-        tabs: tabs,
-      })
-    );
-  } catch (e) {
-    console.error('[AMRTF-Bridge-BG] 發送分頁清單失敗:', e);
-  }
-}
-
-// 無論目前 Chrome 在哪一個頁面，都切換並置頂聚焦顯示目標分頁
-function activateTab(tabId) {
-  if (!tabId) {
-    const first = connectedTabs.keys().next().value;
-    if (first) tabId = first;
-    else return;
-  }
-  activeTabId = tabId;
-
-  chrome.tabs.get(tabId, (tab) => {
-    if (chrome.runtime.lastError || !tab) {
-      connectedTabs.delete(tabId);
-      broadcastTabsList();
-      return;
-    }
-
-    // 1. 將該分頁在該視窗設為 active
-    chrome.tabs.update(tab.id, { active: true }, () => {
-      // 2. 將包含該分頁的 Chrome 視窗置頂並獲得系統焦點
-      if (tab.windowId) {
-        chrome.windows.update(tab.windowId, { focused: true }, () => {
-          chrome.tabs.update(tab.id, { active: true });
+      if (version !== excluded_websites_version) {
+        const newDisabledSites = [...new Set([...disabledSites, ...sites])];
+        await chrome.storage.sync.set({
+          disabledSites: newDisabledSites,
+          excluded_websites_version: version,
         });
       }
-    });
-
-    broadcastTabsList();
-    reportActiveTabState();
-  });
-}
-
-function cycleToNextTab() {
-  const tabIds = Array.from(connectedTabs.keys());
-  if (tabIds.length === 0) {
-    scanAllAmrtfTabs();
-    return;
-  }
-  const currentIdx = tabIds.indexOf(activeTabId);
-  const nextIdx = (currentIdx + 1) % tabIds.length;
-  activateTab(tabIds[nextIdx]);
-}
-
-function selectTabByIndex(index) {
-  const tabIds = Array.from(connectedTabs.keys());
-  if (index >= 0 && index < tabIds.length) {
-    activateTab(tabIds[index]);
-  }
-}
-
-function openNewTabAndFocus(url) {
-  chrome.tabs.create({ url: url, active: true }, (tab) => {
-    if (tab && tab.id) {
-      activeTabId = tab.id;
-      if (tab.windowId) {
-        chrome.windows.update(tab.windowId, { focused: true });
-      }
-      scanAllAmrtfTabs();
+    } catch (error) {
+      console.error("Error loading excluded sites:", error);
     }
-  });
-}
-
-function toggleWindowFullscreen() {
-  const targetId = activeTabId;
-  if (targetId) {
-    chrome.tabs.get(targetId, (tab) => {
-      const winId = tab && tab.windowId ? tab.windowId : chrome.windows.WINDOW_ID_CURRENT;
-      chrome.windows.get(winId, (win) => {
-        if (win && win.id) {
-          const nextState = win.state === 'fullscreen' ? 'normal' : 'fullscreen';
-          chrome.windows.update(win.id, { state: nextState, focused: true });
-        }
-      });
-    });
-  } else {
-    chrome.windows.getCurrent((win) => {
-      if (win && win.id) {
-        const nextState = win.state === 'fullscreen' ? 'normal' : 'fullscreen';
-        chrome.windows.update(win.id, { state: nextState, focused: true });
-      }
-    });
-  }
-}
-
-// 4. 監聽 Chrome 分頁事件
-chrome.tabs.onActivated.addListener((activeInfo) => {
-  if (connectedTabs.has(activeInfo.tabId)) {
-    activeTabId = activeInfo.tabId;
-    broadcastTabsList();
-    reportActiveTabState();
   }
 });
 
-chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  if (tab.url && tab.url.includes('amrtf.org')) {
-    if (changeInfo.status === 'complete') {
-      chrome.tabs.sendMessage(tabId, { action: 'query_state' }, () => {
-        if (chrome.runtime.lastError) {
-          chrome.scripting
-            .executeScript({
-              target: { tabId: tabId },
-              files: ['content.js'],
-            })
-            .catch(() => {});
-        }
-      });
+chrome.action.onClicked.addListener((tab) => {
+    if (tab.id) {
+        chrome.tabs.sendMessage(tab.id, { action: "toggleSidebar" }).catch(() => {
+            // Sin content script (chrome://, tienda, visor de PDF…): el sidebar
+            // no puede cargarse, así que se abre el panel global de anotaciones.
+            openAnnotationsPanel();
+        });
     }
-    scanAllAmrtfTabs();
-  }
 });
 
-chrome.tabs.onRemoved.addListener((closedTabId) => {
-  if (connectedTabs.has(closedTabId)) {
-    connectedTabs.delete(closedTabId);
-    if (activeTabId === closedTabId) {
-      const nextTab = connectedTabs.keys().next().value;
-      activeTabId = nextTab || null;
-      if (activeTabId) {
-        const nextInfo = connectedTabs.get(activeTabId);
-        if (nextInfo && nextInfo.lastState) {
-          sendStateToCompanion(nextInfo.lastState, activeTabId);
-        }
-      }
-    }
-    broadcastTabsList();
-  }
-});
-
-// 5. 處理來自 Content Script 與 Popup 的訊息
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  const senderTabId = sender.tab ? sender.tab.id : null;
-
-  if (request.type === 'REQ_TOGGLE_FULLSCREEN') {
-    toggleWindowFullscreen();
-    sendResponse({ success: true });
-    return true;
-  }
-
-  if (request.type === 'TAB_REGISTER') {
-    if (senderTabId) {
-      connectedTabs.set(senderTabId, {
-        tabId: senderTabId,
-        windowId: sender.tab?.windowId,
-        lessonNumber: request.data.lessonNumber,
-        lessonTitle: request.data.lessonTitle,
-        isFocused: request.data.isFocused,
-        lastState: request.data,
-      });
-
-      if (!activeTabId || activeTabId === senderTabId || connectedTabs.size === 1 || request.data.isFocused) {
-        activeTabId = senderTabId;
-      }
-      sendStateToCompanion(request.data, senderTabId);
-      broadcastTabsList();
+    if (request.action === 'toggleSidebarFromBall') {      // [大慈恩版] 懸浮球
+        if (sender.tab && sender.tab.id) chrome.tabs.sendMessage(sender.tab.id, { action: 'toggleSidebar' }).catch(() => {});
+        return;
     }
-    sendResponse({ success: true, activeTabId });
-  } else if (request.type === 'TAB_STATE_UPDATE') {
-    if (senderTabId) {
-      const tabInfo = connectedTabs.get(senderTabId) || { tabId: senderTabId, windowId: sender.tab?.windowId };
-      tabInfo.lessonNumber = request.data.lessonNumber;
-      tabInfo.lessonTitle = request.data.lessonTitle;
-      tabInfo.lastState = request.data;
-      connectedTabs.set(senderTabId, tabInfo);
-
-      if (senderTabId === activeTabId || connectedTabs.size === 1) {
-        sendStateToCompanion(request.data, senderTabId);
-      }
-      broadcastTabsList();
+    if (request.action === 'openTab') {
+        chrome.tabs.create({ url: request.url, active: true });
+        return;
     }
-    sendResponse({ success: true });
-  } else if (request.type === 'TAB_FOCUSED') {
-    if (senderTabId) {
-      activeTabId = senderTabId;
-      const tabInfo = connectedTabs.get(senderTabId);
-      if (tabInfo && tabInfo.lastState) {
-        sendStateToCompanion(tabInfo.lastState, senderTabId);
-      }
-      broadcastTabsList();
+    if (request.action === 'openAnnotationsPanel') {
+        openAnnotationsPanel(request.pageUrl);
+        return;
     }
-    sendResponse({ success: true });
-  } else if (request.type === 'POPUP_GET_STATUS') {
-    scanAllAmrtfTabs();
-    sendResponse({
-      wsConnected: ws && ws.readyState === WebSocket.OPEN,
-      wsUrl: wsUrl,
-      mqttConnected: !!(mqttClient && mqttClient.connected),
-      mqttEnabled: mqttEnabled,
-      mqttBrokerUrl: mqttBrokerUrl,
-      mqttTopicPrefix: mqttTopicPrefix,
-      mqttUsername: mqttUsername,
-      mqttPassword: mqttPassword,
-      mqttLastError: mqttLastError,
-      activeTabId: activeTabId,
-      tabsCount: connectedTabs.size,
-    });
-  } else if (request.type === 'POPUP_SET_CONFIG') {
-    if (request.wsUrl) {
-      wsUrl = request.wsUrl;
+    if (typeof request.action === 'string' && request.action.startsWith('drive:')) {
+        handleDriveMessage(request)
+            .then(sendResponse)
+            .catch((error) => sendResponse({ ok: false, error: String((error && error.message) || error) }));
+        return true; // respuesta asíncrona
     }
-    if (request.mqttEnabled !== undefined) {
-      mqttEnabled = !!request.mqttEnabled;
-    }
-    if (request.mqttBrokerUrl) {
-      mqttBrokerUrl = request.mqttBrokerUrl;
-    }
-    if (request.mqttTopicPrefix) {
-      mqttTopicPrefix = request.mqttTopicPrefix;
-    }
-    if (request.mqttUsername !== undefined) {
-      mqttUsername = request.mqttUsername;
-    }
-    if (request.mqttPassword !== undefined) {
-      mqttPassword = request.mqttPassword;
-    }
-
-    chrome.storage.local.set(
-      {
-        wsUrl,
-        mqttEnabled,
-        mqttBrokerUrl,
-        mqttTopicPrefix,
-        mqttUsername,
-        mqttPassword,
-      },
-      () => {
-        connectWebSocket();
-        if (mqttEnabled) {
-          connectMqtt();
-        } else {
-          disconnectMqtt();
-        }
-      }
-    );
-    sendResponse({ success: true });
-  } else if (request.type === 'POPUP_CLAIM_ACTIVE') {
-    if (request.targetTabId) {
-      activateTab(request.targetTabId);
-    }
-    sendResponse({ success: true });
-  }
-  return true;
+    // El resto de acciones (settingsChanged, annotationsUpdated, …) son
+    // broadcasts entre content script y sidebar; el SW no participa.
 });
 
-// 6. 發送狀態至 Companion 與 MQTT
-function sendStateToCompanion(stateData, tabId) {
-  // 同步推播至 MQTT
-  publishStateToMqtt(stateData, tabId);
+/* =====================================================================
+ * Panel de anotaciones (annotations.html)
+ *
+ * Página de la extensión a pestaña completa con TODAS las anotaciones de
+ * todos los sitios. Se abre desde el sidebar, desde el menú contextual del
+ * icono y, como alternativa, al pulsar el icono en páginas donde el
+ * content script no puede ejecutarse. Se reutiliza la pestaña si ya existe.
+ * ===================================================================== */
 
-  if (!ws || ws.readyState !== WebSocket.OPEN) return;
+const PANEL_PATH = 'annotations.html';
+const PANEL_MENU_ID = 'qhp-open-annotations-panel';
+const BALL_MENU_ID = 'qhp-toggle-floating-ball';        // [大慈恩版] 懸浮球
 
-  const payload = {
-    type: 'STATE_UPDATE',
-    data: {
-      ...stateData,
-      tabId: tabId,
-    },
-  };
-
-  try {
-    ws.send(JSON.stringify(payload));
-  } catch (e) {
-    console.error('[AMRTF-Bridge-BG] 發送狀態至 Companion 失敗:', e);
-  }
-}
-
-function reportActiveTabState() {
-  if (activeTabId && connectedTabs.has(activeTabId)) {
-    const tab = connectedTabs.get(activeTabId);
-    if (tab.lastState) {
-      sendStateToCompanion(tab.lastState, activeTabId);
+async function openAnnotationsPanel(pageUrl) {
+    const base = chrome.runtime.getURL(PANEL_PATH);
+    try {
+        const tabs = await chrome.tabs.query({ url: `${base}*` });
+        // Sin permiso "tabs", Chrome ignora el filtro `url` y devuelve todas
+        // las pestañas: comprobar la URL antes de reutilizar una.
+        const panelTab = (tabs || []).find((tab) => typeof tab.url === 'string' && tab.url.startsWith(base));
+        if (panelTab) {
+            const tab = panelTab;
+            await chrome.tabs.update(tab.id, { active: true });
+            if (typeof tab.windowId === 'number') {
+                await chrome.windows.update(tab.windowId, { focused: true });
+            }
+            if (pageUrl) {
+                chrome.tabs.sendMessage(tab.id, { action: 'panel:focusPage', pageUrl }).catch(() => {});
+            }
+            return;
+        }
+    } catch (e) {
+        // Sin permiso para filtrar pestañas por URL: se abre una nueva.
     }
-  }
+    const url = pageUrl ? `${base}?page=${encodeURIComponent(pageUrl)}` : base;
+    await chrome.tabs.create({ url, active: true });
 }
 
-// 7. 轉發 Companion 指令至分頁
-function dispatchCommandToTabs(cmd) {
-  if (activeTabId) {
-    chrome.tabs.sendMessage(activeTabId, cmd, () => {
-      if (chrome.runtime.lastError) {
-        broadcastToAllTabs(cmd);
-      }
+function installPanelContextMenu() {
+    if (!chrome.contextMenus) return;
+    chrome.contextMenus.removeAll(() => {
+        chrome.contextMenus.create({
+            id: PANEL_MENU_ID,
+            title: chrome.i18n.getMessage('openAnnotationsPanel'),
+            contexts: ['action'],
+        });
+        chrome.contextMenus.create({
+            id: BALL_MENU_ID,
+            title: chrome.i18n.getMessage('toggleBallLabel'),
+            contexts: ['action'],
+        });
     });
-  } else {
-    broadcastToAllTabs(cmd);
-  }
 }
 
-function broadcastToAllTabs(cmd) {
-  chrome.tabs.query({}, (tabs) => {
-    for (const t of tabs) {
-      if (t.id && t.url && t.url.includes('amrtf.org')) {
-        chrome.tabs.sendMessage(t.id, cmd, () => {});
-      }
+if (chrome.contextMenus) {
+    chrome.contextMenus.onClicked.addListener((info) => {
+        if (info.menuItemId === PANEL_MENU_ID) openAnnotationsPanel();
+        if (info.menuItemId === BALL_MENU_ID) {
+            chrome.storage.local.get('qhp-ball-hidden').then((items) => chrome.storage.local.set({ 'qhp-ball-hidden': !items['qhp-ball-hidden'] }));
+        }
+    });
+}
+
+/* =====================================================================
+ * Sincronización con Google Drive (drive.appdata) — F2.1–F2.3 del plan.
+ *
+ * El SW es el único dueño del token OAuth y del cliente REST. Los content
+ * scripts hablan por mensajes `drive:*` (ver DriveAnnotationsBackend en
+ * storage-backend.js). Las escrituras pasan por una cola persistente en
+ * chrome.storage.local (los SW de MV3 se suspenden) que se vacía con un
+ * read-merge-write por página contra `appDataFolder`.
+ * ===================================================================== */
+
+const DRIVE = {
+    SESSION_KEY: QHP.shared.SESSION_KEY,      // 'qhp-drive-session'
+    QUEUE_KEY: 'qhp-drive-queue',
+    CACHE_PREFIX: 'qhp-drive-cache-',
+    LAST_SYNC_KEY: 'qhp-drive-last-sync',
+    BACKOFF_KEY: 'qhp-drive-backoff',
+    ABSORB_PENDING_KEY: 'qhp-drive-absorb-pending',
+    FLUSH_ALARM: 'qhp-drive-flush',
+    API: 'https://www.googleapis.com/drive/v3',
+    UPLOAD_API: 'https://www.googleapis.com/upload/drive/v3',
+    LOAD_TIMEOUT_MS: 4000,                    // lectura con timeout corto (§5)
+};
+
+class DriveError extends Error {
+    // code: 'auth' | 'rate' | 'network' | 'http'
+    constructor(code, message) {
+        super(`[${code}] ${message}`);
+        this.code = code;
     }
-  });
 }
 
-// 8. 自動偵測 GitHub 儲存庫更新
-function compareSemver(v1, v2) {
-  const clean1 = (v1 || '').replace(/^[^\d]*/, '');
-  const clean2 = (v2 || '').replace(/^[^\d]*/, '');
-  const p1 = clean1.split('.').map((n) => parseInt(n, 10) || 0);
-  const p2 = clean2.split('.').map((n) => parseInt(n, 10) || 0);
-  for (let i = 0; i < Math.max(p1.length, p2.length); i++) {
-    const num1 = p1[i] || 0;
-    const num2 = p2[i] || 0;
-    if (num1 > num2) return 1;
-    if (num1 < num2) return -1;
-  }
-  return 0;
+function getLocal(key) {
+    return chrome.storage.local.get(key).then(items => items[key]);
 }
 
-function checkRepoUpdate() {
-  chrome.storage.local.get(['githubRepo'], async (res) => {
-    const repo = res.githubRepo || 'houtacheng/companion-module-amrtf-website';
-    const currentVersion = chrome.runtime.getManifest().version || '1.1.0';
+// ---------------------------------------------------------------------
+// Flag de sesión (única fuente de verdad, escrito SOLO aquí)
+// ---------------------------------------------------------------------
 
-    let remoteVersion = null;
-    let releaseUrl = `https://github.com/${repo}`;
+async function getDriveSession() {
+    return (await getLocal(DRIVE.SESSION_KEY)) || { signedIn: false };
+}
+
+async function setDriveSession(session) {
+    await chrome.storage.local.set({ [DRIVE.SESSION_KEY]: session });
+}
+
+/**
+ * El grant dejó de ser válido (revocado o caducado sin refresh posible).
+ * La UI ofrecerá re-conectar; nunca se lanza un prompt espontáneo.
+ */
+async function markNeedsReauth() {
+    const session = await getDriveSession();
+    if (!session.signedIn || session.needsReauth) return;
+    await setDriveSession({ ...session, needsReauth: true });
+    await chrome.alarms.clear(DRIVE.FLUSH_ALARM);
+}
+
+// ---------------------------------------------------------------------
+// Token OAuth (chrome.identity)
+// ---------------------------------------------------------------------
+
+function getToken(interactive) {
+    return new Promise((resolve, reject) => {
+        try {
+            chrome.identity.getAuthToken({ interactive }, (token) => {
+                if (chrome.runtime.lastError || !token) {
+                    reject(new DriveError('auth', chrome.runtime.lastError ? chrome.runtime.lastError.message : 'no token'));
+                } else {
+                    resolve(token);
+                }
+            });
+        } catch (e) {
+            reject(new DriveError('auth', String(e)));
+        }
+    });
+}
+
+function removeCachedToken(token) {
+    return new Promise((resolve) => chrome.identity.removeCachedAuthToken({ token }, resolve));
+}
+
+// ---------------------------------------------------------------------
+// fetch autenticado con reintento de 401 y clasificación de errores
+// ---------------------------------------------------------------------
+
+async function rawDriveFetch(url, init, token) {
+    try {
+        return await fetch(url, {
+            ...init,
+            headers: { ...(init.headers || {}), Authorization: `Bearer ${token}` },
+        });
+    } catch (e) {
+        throw new DriveError('network', String((e && e.message) || e));
+    }
+}
+
+async function read403Reason(response) {
+    try {
+        const body = await response.json();
+        return (body.error && (
+            (body.error.errors && body.error.errors[0] && body.error.errors[0].reason) ||
+            body.error.status ||
+            body.error.message
+        )) || 'forbidden';
+    } catch (e) {
+        return 'forbidden';
+    }
+}
+
+/**
+ * 401 → invalidar token cacheado y reintentar en silencio una vez; si
+ * persiste, needsReauth. Deja pasar el 404 (los llamantes lo tratan como
+ * «no existe»); cualquier otro !ok se lanza clasificado.
+ */
+async function driveFetch(url, init = {}) {
+    let token;
+    try {
+        token = await getToken(false);
+    } catch (e) {
+        await markNeedsReauth();
+        throw e;
+    }
+
+    let response = await rawDriveFetch(url, init, token);
+
+    if (response.status === 401) {
+        await removeCachedToken(token);
+        try {
+            token = await getToken(false);
+        } catch (e) {
+            await markNeedsReauth();
+            throw e;
+        }
+        response = await rawDriveFetch(url, init, token);
+        if (response.status === 401) {
+            await markNeedsReauth();
+            throw new DriveError('auth', '401 tras reintento con token fresco');
+        }
+    }
+
+    if (response.status === 429) throw new DriveError('rate', 'HTTP 429');
+    if (response.status === 403) {
+        const reason = await read403Reason(response);
+        if (/ratelimit/i.test(reason)) throw new DriveError('rate', `403 ${reason}`);
+        throw new DriveError('http', `403 ${reason}`);
+    }
+    if (!response.ok && response.status !== 404) {
+        throw new DriveError('http', `HTTP ${response.status}`);
+    }
+    return response;
+}
+
+function withTimeout(promise, ms) {
+    return new Promise((resolve, reject) => {
+        const timer = setTimeout(() => reject(new DriveError('network', `timeout ${ms}ms`)), ms);
+        promise.then(
+            (value) => { clearTimeout(timer); resolve(value); },
+            (error) => { clearTimeout(timer); reject(error); },
+        );
+    });
+}
+
+// ---------------------------------------------------------------------
+// Cliente REST de Drive v3 sobre appDataFolder (§4 del plan)
+// ---------------------------------------------------------------------
+
+async function sha256Hex(text) {
+    const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+    return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function pageFileName(hash) {
+    return `page-${hash}.json`;
+}
+
+/**
+ * Lookup por nombre exacto. No se usa appProperties.pageUrl para buscar:
+ * cada entrada está limitada a 124 bytes y las URLs lo exceden; el pageUrl
+ * completo viaja dentro del JSON.
+ */
+async function findPageFile(fileName) {
+    const q = encodeURIComponent(`name = '${fileName}'`);
+    const fields = encodeURIComponent('files(id,name,modifiedTime,size)');
+    const response = await driveFetch(
+        `${DRIVE.API}/files?spaces=appDataFolder&q=${q}&orderBy=modifiedTime%20desc&fields=${fields}`
+    );
+    const body = await response.json();
+    const files = (body && body.files) || [];
+    if (files.length > 1) {
+        // Carrera de creación entre dispositivos (§5: ventana aceptable).
+        console.warn(`QHP Drive: ${files.length} archivos para ${fileName}; se usa el más reciente.`);
+    }
+    return files[0] || null;
+}
+
+async function downloadPageBody(fileId) {
+    const response = await driveFetch(`${DRIVE.API}/files/${fileId}?alt=media`);
+    if (response.status === 404) return null;
+    try {
+        return await response.json();
+    } catch (e) {
+        console.error('QHP Drive: JSON corrupto en Drive; se tratará como vacío.', e);
+        return null;
+    }
+}
+
+function multipartBody(boundary, metadata, content) {
+    return (
+        `--${boundary}\r\n` +
+        'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
+        `${JSON.stringify(metadata)}\r\n` +
+        `--${boundary}\r\n` +
+        'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
+        `${JSON.stringify(content)}\r\n` +
+        `--${boundary}--`
+    );
+}
+
+function makeBoundary() {
+    return `qhp-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+// appProperties.qhpAnnotations permite a drive:stats contar anotaciones
+// desde files.list sin descargar cuerpos; por eso las escrituras son
+// multipart (metadata + media) también en la actualización.
+function pageFileAppProperties(body) {
+    return { qhpAnnotations: String(Object.keys(body.annotations || {}).length) };
+}
+
+async function createPageFile(fileName, body) {
+    const boundary = makeBoundary();
+    const metadata = {
+        name: fileName,
+        parents: ['appDataFolder'],
+        appProperties: pageFileAppProperties(body),
+    };
+    await driveFetch(`${DRIVE.UPLOAD_API}/files?uploadType=multipart&fields=id`, {
+        method: 'POST',
+        headers: { 'Content-Type': `multipart/related; boundary=${boundary}` },
+        body: multipartBody(boundary, metadata, body),
+    });
+}
+
+/** @returns false si el archivo desapareció bajo nuestros pies (404). */
+async function updatePageFile(fileId, body) {
+    const boundary = makeBoundary();
+    const metadata = { appProperties: pageFileAppProperties(body) };
+    const response = await driveFetch(`${DRIVE.UPLOAD_API}/files/${fileId}?uploadType=multipart&fields=id`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': `multipart/related; boundary=${boundary}` },
+        body: multipartBody(boundary, metadata, body),
+    });
+    return response.status !== 404;
+}
+
+// Solo mantenimiento (la usará F2.4: limpieza en el cierre de sesión).
+async function deletePageFile(fileId) {
+    await driveFetch(`${DRIVE.API}/files/${fileId}`, { method: 'DELETE' });
+}
+
+// ---------------------------------------------------------------------
+// Caché local de cuerpos de página (lecturas offline, §5)
+// ---------------------------------------------------------------------
+
+function cacheKeyFor(hash) {
+    return `${DRIVE.CACHE_PREFIX}${hash}`;
+}
+
+async function getCachedPageBody(hash) {
+    return (await getLocal(cacheKeyFor(hash))) || null;
+}
+
+async function setCachedPageBody(hash, body) {
+    await chrome.storage.local.set({ [cacheKeyFor(hash)]: body });
+}
+
+// ---------------------------------------------------------------------
+// Cola de escritura persistente (§5)
+// ---------------------------------------------------------------------
+
+// Serializa las mutaciones read-modify-write de la cola: dos enqueue (o un
+// enqueue y la limpieza post-flush) intercalados se pisarían la lista.
+let queueLock = Promise.resolve();
+function withQueueLock(fn) {
+    const run = queueLock.then(fn, fn);
+    queueLock = run.then(() => undefined, () => undefined);
+    return run;
+}
+
+async function readQueue() {
+    return (await getLocal(DRIVE.QUEUE_KEY)) || [];
+}
+
+async function enqueueOp(op) {
+    op.seq = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    await withQueueLock(async () => {
+        const queue = await readQueue();
+        queue.push(op);
+        await chrome.storage.local.set({ [DRIVE.QUEUE_KEY]: queue });
+    });
+    await ensureFlushAlarm();
+    flushQueue(); // si hay red se sube ya; si no, queda para el alarm
+}
+
+async function removeOpsFromQueue(ops) {
+    const seqs = new Set(ops.map(op => op.seq));
+    await withQueueLock(async () => {
+        const queue = await readQueue();
+        await chrome.storage.local.set({ [DRIVE.QUEUE_KEY]: queue.filter(op => !seqs.has(op.seq)) });
+    });
+}
+
+async function ensureFlushAlarm() {
+    const existing = await chrome.alarms.get(DRIVE.FLUSH_ALARM);
+    if (!existing) chrome.alarms.create(DRIVE.FLUSH_ALARM, { periodInMinutes: 1 });
+}
+
+// ---------------------------------------------------------------------
+// Backoff exponencial para 403 userRateLimitExceeded / 429 (§5)
+// ---------------------------------------------------------------------
+
+async function noteRateLimit() {
+    const state = (await getLocal(DRIVE.BACKOFF_KEY)) || { failures: 0 };
+    const failures = state.failures + 1;
+    const delayMinutes = Math.min(Math.pow(2, failures - 1), 60);
+    await chrome.storage.local.set({
+        [DRIVE.BACKOFF_KEY]: { failures, until: Date.now() + delayMinutes * 60000 },
+    });
+    chrome.alarms.create(DRIVE.FLUSH_ALARM, { delayInMinutes: delayMinutes, periodInMinutes: 1 });
+}
+
+async function clearBackoff() {
+    await chrome.storage.local.remove(DRIVE.BACKOFF_KEY);
+}
+
+// ---------------------------------------------------------------------
+// Flush: read-merge-write por página (§5)
+// ---------------------------------------------------------------------
+
+let flushInFlight = null;
+let flushRequestedAgain = false;
+
+function flushQueue() {
+    if (flushInFlight) {
+        flushRequestedAgain = true;
+        return flushInFlight;
+    }
+    flushInFlight = doFlushQueue()
+        .catch((error) => console.warn('QHP Drive: flush interrumpido:', (error && error.message) || error))
+        .finally(() => {
+            flushInFlight = null;
+            if (flushRequestedAgain) {
+                flushRequestedAgain = false;
+                flushQueue();
+            }
+        });
+    return flushInFlight;
+}
+
+async function doFlushQueue() {
+    const session = await getDriveSession();
+    if (!session.signedIn || session.needsReauth) return;
+
+    const backoff = await getLocal(DRIVE.BACKOFF_KEY);
+    if (backoff && Date.now() < backoff.until) return;
+
+    // Retomar una absorción incompleta antes de la cola: sus páginas son
+    // prerequisito para que las lecturas vean el estado completo.
+    if (await getLocal(DRIVE.ABSORB_PENDING_KEY)) {
+        const absorption = await runAbsorption();
+        if (!absorption.complete) return; // alarm/backoff ya gestionados dentro
+    }
+
+    const queue = await readQueue();
+    if (queue.length === 0) {
+        await chrome.alarms.clear(DRIVE.FLUSH_ALARM);
+        return;
+    }
+
+    // Agrupar por página: N ops (p. ej. los write-backs del anclaje) se
+    // traducen en UNA lectura + UNA escritura por página, no en N requests.
+    const byPage = new Map();
+    for (const op of queue) {
+        if (!byPage.has(op.pageUrl)) byPage.set(op.pageUrl, []);
+        byPage.get(op.pageUrl).push(op);
+    }
+
+    for (const [pageUrl, ops] of byPage) {
+        try {
+            await flushPage(pageUrl, ops);
+            await removeOpsFromQueue(ops);
+        } catch (error) {
+            const code = error && error.code;
+            if (code === 'rate') { await noteRateLimit(); return; }
+            if (code === 'auth') return;                      // markNeedsReauth ya paró el alarm
+            if (code === 'network') { await ensureFlushAlarm(); return; }
+            // http inesperado: no bloquear al resto de páginas; el alarm reintenta
+            console.warn(`QHP Drive: fallo subiendo ${pageUrl}:`, (error && error.message) || error);
+        }
+    }
+
+    const remaining = await readQueue();
+    if (remaining.length === 0) {
+        await clearBackoff();
+        await chrome.alarms.clear(DRIVE.FLUSH_ALARM);
+    } else {
+        await ensureFlushAlarm();
+    }
+}
+
+async function flushPage(pageUrl, ops) {
+    const hash = await sha256Hex(pageUrl);
+    const fileName = pageFileName(hash);
+
+    // 1. Leer el estado actual de Drive. Si la lectura falla, se lanza y
+    //    las ops quedan en cola: nunca escribir a ciegas sobre lo no leído.
+    const file = await findPageFile(fileName);
+    let base = file ? await downloadPageBody(file.id) : null;
+    if (!base || typeof base !== 'object' || !base.annotations) {
+        base = QHP.shared.emptyPageBody(pageUrl);
+    }
+
+    // 2. Merge LWW doble + tombstones y 3. poda de tombstones viejos.
+    const merged = QHP.shared.applyOpsToPageBody(base, ops);
+    QHP.shared.pruneTombstones(merged);
+    merged.updatedAt = Date.now();
+
+    // 4. Escribir y actualizar caché + lastSyncAt.
+    let updated = false;
+    if (file) updated = await updatePageFile(file.id, merged);
+    if (!updated) await createPageFile(fileName, merged);
+
+    await setCachedPageBody(hash, merged);
+    await chrome.storage.local.set({ [DRIVE.LAST_SYNC_KEY]: Date.now() });
+}
+
+// ---------------------------------------------------------------------
+// Absorción sync+local → Drive (§6): paso idempotente del sign-in
+// ---------------------------------------------------------------------
+
+async function collectStoredAnnotationItems() {
+    const [syncItems, localItems] = await Promise.all([
+        chrome.storage.sync.get(null),
+        chrome.storage.local.get(null),
+    ]);
+    const onlyAnnotations = (items) => {
+        const out = {};
+        for (const key of Object.keys(items || {})) {
+            if (key.startsWith(QHP.shared.ANNOTATION_KEY_PREFIX)) out[key] = items[key];
+        }
+        return out;
+    };
+    return {
+        syncAnnotations: onlyAnnotations(syncItems),
+        localAnnotations: onlyAnnotations(localItems),
+    };
+}
+
+/**
+ * Absorbe todas las anotaciones de chrome.storage.sync y .local hacia
+ * Drive con el read-merge-write de §5 (el LWW respeta lo que ya hubiera
+ * de otros dispositivos). Solo limpia las claves de origen si TODAS las
+ * páginas se escribieron bien; si no, es seguro reintentar (idempotente).
+ * Los errores rate/auth/network se relanzan para que el llamante gestione
+ * backoff/reauth/alarm.
+ */
+async function absorbIntoDrive() {
+    const { syncAnnotations, localAnnotations } = await collectStoredAnnotationItems();
+    const syncKeys = Object.keys(syncAnnotations);
+    const localKeys = Object.keys(localAnnotations);
+    if (syncKeys.length === 0 && localKeys.length === 0) {
+        return { pages: 0, annotations: 0, complete: true };
+    }
+
+    // Cada origen se reensambla por separado y se fusiona por id con el
+    // LWW doble: un mismo id puede vivir en ambos (p. ej. copia descargada
+    // en un cierre de sesión previo + copia llegada por Chrome sync).
+    const syncMap = QHP.shared.reassembleAll(syncAnnotations);
+    const localMap = QHP.shared.reassembleAll(localAnnotations);
+    const merged = new Map(localMap);
+    for (const [id, copy] of syncMap) {
+        merged.set(id, QHP.shared.mergeAnnotationCopies(merged.get(id), copy));
+    }
+
+    const byPage = new Map();
+    for (const annotation of merged.values()) {
+        if (!annotation || !annotation.id || !annotation.pageUrl) continue;
+        if (!byPage.has(annotation.pageUrl)) byPage.set(annotation.pageUrl, []);
+        byPage.get(annotation.pageUrl).push({
+            type: 'upsert',
+            pageUrl: annotation.pageUrl,
+            annotation,
+            ts: QHP.shared.effectiveContentTs(annotation),
+        });
+    }
+
+    let failedPages = 0;
+    for (const [pageUrl, ops] of byPage) {
+        try {
+            await flushPage(pageUrl, ops);
+        } catch (error) {
+            const code = error && error.code;
+            if (code === 'rate' || code === 'auth' || code === 'network') throw error;
+            failedPages++;
+            console.warn(`QHP Drive: absorción de ${pageUrl} falló:`, (error && error.message) || error);
+        }
+    }
+    if (failedPages > 0) {
+        return { pages: byPage.size, annotations: merged.size, complete: false };
+    }
+
+    // Limpieza solo con éxito total; los settings no se tocan.
+    if (syncKeys.length > 0) await chrome.storage.sync.remove(syncKeys);
+    if (localKeys.length > 0) await chrome.storage.local.remove(localKeys);
+    return { pages: byPage.size, annotations: merged.size, complete: true };
+}
+
+/**
+ * Ejecuta la absorción gestionando el flag de reintento: si queda
+ * incompleta (red, rate, páginas sueltas), `qhp-drive-absorb-pending`
+ * asegura que el alarm de flush la retome hasta converger.
+ */
+async function runAbsorption() {
+    try {
+        const result = await absorbIntoDrive();
+        if (result.complete) {
+            await chrome.storage.local.remove(DRIVE.ABSORB_PENDING_KEY);
+        } else {
+            await chrome.storage.local.set({ [DRIVE.ABSORB_PENDING_KEY]: true });
+            await ensureFlushAlarm();
+        }
+        return result;
+    } catch (error) {
+        await chrome.storage.local.set({ [DRIVE.ABSORB_PENDING_KEY]: true });
+        const code = error && error.code;
+        if (code === 'rate') await noteRateLimit();
+        else if (code !== 'auth') await ensureFlushAlarm(); // auth: markNeedsReauth ya paró el alarm
+        console.warn('QHP Drive: absorción interrumpida:', (error && error.message) || error);
+        return { pages: 0, annotations: 0, complete: false };
+    }
+}
+
+// ---------------------------------------------------------------------
+// Handlers de mensajes drive:* (§3)
+// ---------------------------------------------------------------------
+
+async function handleDriveMessage(request) {
+    switch (request.action) {
+        case 'drive:status': return handleStatus();
+        case 'drive:signIn': return handleSignIn();
+        case 'drive:signOut': return handleSignOut(request);
+        case 'drive:loadPage': return handleLoadPage(String(request.pageUrl || ''));
+        case 'drive:loadAll': return handleLoadAll();
+        case 'drive:saveAnnotation': return handleSaveAnnotation(request);
+        case 'drive:removeAnnotation': return handleRemoveAnnotation(request);
+        case 'drive:stats': return handleStats();
+        case 'drive:pollPage': return handlePollPage(request);
+        default: throw new Error(`acción desconocida: ${request.action}`);
+    }
+}
+
+async function handleStatus() {
+    const session = await getDriveSession();
+    const queue = await readQueue();
+    return {
+        ok: true,
+        signedIn: !!session.signedIn,
+        account: session.account || null,
+        needsReauth: !!session.needsReauth,
+        lastSyncAt: (await getLocal(DRIVE.LAST_SYNC_KEY)) || null,
+        queueLength: queue.length,
+    };
+}
+
+async function handleSignIn() {
+    await getToken(true); // consent interactivo; rechaza si el usuario cancela
+
+    // La cuenta es informativa: si about.get no responde con el scope
+    // drive.appdata, la UI muestra solo «Conectado» (§7).
+    let account = null;
+    try {
+        const response = await driveFetch(`${DRIVE.API}/about?fields=user(emailAddress)`);
+        const body = await response.json();
+        account = (body.user && body.user.emailAddress) || null;
+    } catch (e) {
+        console.log('QHP Drive: about.get no disponible con drive.appdata:', (e && e.message) || e);
+    }
+
+    // Absorción sync+local → Drive (§6) ANTES de encender el flag: mientras
+    // dura, los content scripts siguen leyendo de sync (datos completos);
+    // al encenderlo recargan ya contra un Drive que lo contiene todo.
+    const absorption = await runAbsorption();
+
+    const previous = await getDriveSession();
+    await setDriveSession({
+        signedIn: true,
+        account,
+        since: previous.signedIn ? previous.since : Date.now(),
+        needsReauth: false,
+    });
+
+    const queue = await readQueue();
+    if (queue.length > 0) {
+        await ensureFlushAlarm();
+        flushQueue();
+    }
+    return {
+        ok: true,
+        account,
+        absorbed: absorption.annotations,
+        absorptionComplete: absorption.complete,
+    };
+}
+
+/**
+ * Enumera los cuerpos de página: desde Drive si hay red; si la lectura
+ * falla, desde la caché local (`fromCache: true` — la UI avisa de que la
+ * copia puede no incluir cambios recientes de otros dispositivos).
+ */
+async function collectDrivePageBodies() {
+    try {
+        const bodies = new Map();
+        const fields = encodeURIComponent('nextPageToken,files(id,name)');
+        const q = encodeURIComponent("name contains 'page-'");
+        let pageToken = null;
+        do {
+            const tokenParam = pageToken ? `&pageToken=${encodeURIComponent(pageToken)}` : '';
+            const response = await driveFetch(
+                `${DRIVE.API}/files?spaces=appDataFolder&q=${q}&pageSize=1000&fields=${fields}${tokenParam}`
+            );
+            const list = await response.json();
+            for (const file of (list && list.files) || []) {
+                const body = await downloadPageBody(file.id);
+                if (body && body.pageUrl && body.annotations) bodies.set(body.pageUrl, body);
+            }
+            pageToken = (list && list.nextPageToken) || null;
+        } while (pageToken);
+        return { bodies, fromCache: false };
+    } catch (error) {
+        console.warn('QHP Drive: sin acceso a Drive para la copia; se usa la caché local:', (error && error.message) || error);
+        const all = await chrome.storage.local.get(null);
+        const bodies = new Map();
+        for (const key of Object.keys(all)) {
+            if (!key.startsWith(DRIVE.CACHE_PREFIX)) continue;
+            const body = all[key];
+            if (body && body.pageUrl && body.annotations) bodies.set(body.pageUrl, body);
+        }
+        return { bodies, fromCache: true };
+    }
+}
+
+function getLocalBytesInUse(keys) {
+    return new Promise((resolve) => {
+        try {
+            chrome.storage.local.getBytesInUse(keys, (bytes) => resolve(bytes || 0));
+        } catch (e) {
+            resolve(0);
+        }
+    });
+}
+
+async function handleSignOut(request) {
+    const session = await getDriveSession();
+    if (!session.signedIn) {
+        await setDriveSession({ signedIn: false });
+        return { ok: true, copied: { pages: 0, annotations: 0 }, fromCache: false };
+    }
+
+    // 1. Vaciar la cola. Si quedan pendientes (sin red) y no viene force,
+    //    se aborta: la UI avisa y re-llama con force si el usuario confirma.
+    await flushQueue();
+    let pending = await readQueue();
+    if (pending.length > 0 && !request.force) {
+        return { ok: false, error: 'pending-ops', pendingOps: pending.length };
+    }
+
+    // 2. Copia local (§6-bis): cuerpos desde Drive o desde la caché, con
+    //    las ops aún encoladas aplicadas encima (un cambio local sin subir
+    //    no debe faltar en la copia; re-conectar lo absorberá hacia Drive).
+    const { bodies, fromCache } = await collectDrivePageBodies();
+    pending = await readQueue();
+    if (pending.length > 0) {
+        const byPage = new Map();
+        for (const op of pending) {
+            if (!byPage.has(op.pageUrl)) byPage.set(op.pageUrl, []);
+            byPage.get(op.pageUrl).push(op);
+        }
+        for (const [pageUrl, ops] of byPage) {
+            const base = bodies.get(pageUrl) || QHP.shared.emptyPageBody(pageUrl);
+            bodies.set(pageUrl, QHP.shared.applyOpsToPageBody(base, ops));
+        }
+    }
+
+    // Anotaciones vivas (tombstones ya aplicados) → items sueltos
+    // `highlighter-annotation-<id>`, sin chunking (local no tiene cuota por
+    // item). Si sobrevive una copia local del mismo id de un cierre de
+    // sesión anterior, se fusiona con LWW en vez de pisarla a ciegas.
+    const existingLocal = await chrome.storage.local.get(null);
+    const itemsToWrite = {};
+    let annotationCount = 0;
+    let pageCount = 0;
+    for (const body of bodies.values()) {
+        const live = QHP.shared.liveAnnotations(body);
+        const ids = Object.keys(live);
+        if (ids.length > 0) pageCount++;
+        for (const id of ids) {
+            const key = `${QHP.shared.ANNOTATION_KEY_PREFIX}${id}`;
+            itemsToWrite[key] = QHP.shared.mergeAnnotationCopies(existingLocal[key], live[id]);
+            annotationCount++;
+        }
+    }
+
+    // 3. Estimación contra la cuota de local (~10 MB). Las claves de
+    //    infraestructura Drive se borran justo después, así que su tamaño
+    //    cuenta como espacio disponible.
+    const QUOTA = chrome.storage.local.QUOTA_BYTES || 10485760;
+    const SAFETY_MARGIN = 102400; // 100 KB
+    const usedBytes = await getLocalBytesInUse(null);
+    const reclaimableKeys = Object.keys(existingLocal).filter(key =>
+        key.startsWith(DRIVE.CACHE_PREFIX) || key === DRIVE.QUEUE_KEY);
+    const reclaimableBytes = reclaimableKeys.length > 0 ? await getLocalBytesInUse(reclaimableKeys) : 0;
+    let copyBytes = 0;
+    for (const key of Object.keys(itemsToWrite)) {
+        copyBytes += key.length + JSON.stringify(itemsToWrite[key]).length;
+    }
+    if (usedBytes - reclaimableBytes + copyBytes > QUOTA - SAFETY_MARGIN) {
+        // No se cierra la sesión: los datos siguen íntegros en Drive.
+        return { ok: false, error: 'local-quota', required: copyBytes, available: Math.max(QUOTA - usedBytes + reclaimableBytes, 0) };
+    }
+
+    // 4. Escribir la copia por lotes acotados.
+    const BATCH_LIMIT_BYTES = 512 * 1024;
+    let batch = {};
+    let batchBytes = 0;
+    for (const key of Object.keys(itemsToWrite)) {
+        batch[key] = itemsToWrite[key];
+        batchBytes += key.length + JSON.stringify(itemsToWrite[key]).length;
+        if (batchBytes >= BATCH_LIMIT_BYTES) {
+            await chrome.storage.local.set(batch);
+            batch = {};
+            batchBytes = 0;
+        }
+    }
+    if (Object.keys(batch).length > 0) await chrome.storage.local.set(batch);
+
+    // 5. Limpieza de la infraestructura Drive, token y flag off (el
+    //    Switching backend vuelve a sync en vivo; load() fusiona local+sync
+    //    y la copia se muestra sin código nuevo de lectura).
+    const cacheKeys = Object.keys(existingLocal).filter(key => key.startsWith(DRIVE.CACHE_PREFIX));
+    await chrome.storage.local.remove([
+        ...cacheKeys, DRIVE.QUEUE_KEY, DRIVE.LAST_SYNC_KEY, DRIVE.BACKOFF_KEY, DRIVE.ABSORB_PENDING_KEY,
+    ]);
+    await chrome.alarms.clear(DRIVE.FLUSH_ALARM);
 
     try {
-      const rawUrl = `https://raw.githubusercontent.com/${repo}/main/chrome-extension/manifest.json?_t=${Date.now()}`;
-      const r = await fetch(rawUrl, { cache: 'no-store' });
-      if (r.ok) {
-        const data = await r.json();
-        remoteVersion = data.version;
-      }
-    } catch (e) {}
+        await removeCachedToken(await getToken(false));
+    } catch (e) {
+        // sin token que limpiar (p. ej. ya revocado): no es un error
+    }
 
-    if (!remoteVersion) {
-      try {
-        const r2 = await fetch(`https://api.github.com/repos/${repo}/releases/latest`);
-        if (r2.ok) {
-          const rel = await r2.json();
-          remoteVersion = (rel.tag_name || '').replace(/^[^\d]*/, '');
-          if (rel.html_url) releaseUrl = rel.html_url;
+    await setDriveSession({ signedIn: false });
+    return { ok: true, copied: { pages: pageCount, annotations: annotationCount }, fromCache };
+}
+
+async function handleLoadPage(pageUrl) {
+    if (!pageUrl) throw new Error('pageUrl requerido');
+    const hash = await sha256Hex(pageUrl);
+    const session = await getDriveSession();
+
+    let body = null;
+    let fromRemote = false;
+    if (session.signedIn) {
+        try {
+            body = await withTimeout(fetchRemotePageBody(pageUrl, hash), DRIVE.LOAD_TIMEOUT_MS);
+            fromRemote = true;
+        } catch (e) {
+            // Sin red / rate / auth: se sirve caché + cola; no es error de UI (§5).
         }
-      } catch (e) {}
+    }
+    if (fromRemote) {
+        await setCachedPageBody(hash, body);
+    } else {
+        body = (await getCachedPageBody(hash)) || QHP.shared.emptyPageBody(pageUrl);
     }
 
-    if (remoteVersion && compareSemver(remoteVersion, currentVersion) > 0) {
-      console.log(`[AMRTF-Bridge-BG] 發現新版本 v${remoteVersion} (當前: v${currentVersion})`);
-      chrome.storage.local.set({
-        updateAvailable: true,
-        latestVersion: remoteVersion,
-        updateUrl: releaseUrl,
-      });
-      chrome.action.setBadgeText({ text: 'NEW' });
-      chrome.action.setBadgeBackgroundColor({ color: '#1a73e8' });
-    } else if (remoteVersion) {
-      chrome.storage.local.set({ updateAvailable: false });
-      chrome.action.setBadgeText({ text: '' });
-    }
-  });
+    const pendingOps = (await readQueue()).filter(op => op.pageUrl === pageUrl);
+    const effective = pendingOps.length > 0 ? QHP.shared.applyOpsToPageBody(body, pendingOps) : body;
+
+    // Acabamos de comprobar que hay red: buena ocasión para vaciar la cola.
+    if (fromRemote && (await readQueue()).length > 0) flushQueue();
+
+    return { ok: true, annotations: QHP.shared.liveAnnotations(effective) };
 }
 
-// 註冊定時警報 (每 360 分鐘 = 6 小時檢查一次)
-try {
-  chrome.alarms.create('CHECK_REPO_UPDATE', { periodInMinutes: 360 });
-  chrome.alarms.onAlarm.addListener((alarm) => {
-    if (alarm.name === 'CHECK_REPO_UPDATE') {
-      checkRepoUpdate();
+
+/**
+ * Todas las páginas con anotaciones vivas, para el panel global. Lee Drive
+ * (o la caché local si no hay acceso, `fromCache: true`), refresca la caché
+ * y aplica la cola pendiente igual que `handleLoadPage`.
+ */
+async function handleLoadAll() {
+    const session = await getDriveSession();
+    if (!session.signedIn) throw new Error('Google Drive no conectado');
+
+    const { bodies, fromCache } = await collectDrivePageBodies();
+    const queue = await readQueue();
+    const opsByPage = new Map();
+    for (const op of queue) {
+        if (!op || !op.pageUrl) continue;
+        if (!opsByPage.has(op.pageUrl)) opsByPage.set(op.pageUrl, []);
+        opsByPage.get(op.pageUrl).push(op);
     }
-  });
-  // Service Worker 啟動後延遲 3 秒執行一次靜默檢查
-  setTimeout(checkRepoUpdate, 3000);
-} catch (e) {
-  console.warn('[AMRTF-Bridge-BG] 設定檢查更新定時器失敗:', e);
+
+    const pages = [];
+    for (const [pageUrl, body] of bodies) {
+        if (!fromCache) {
+            try { await setCachedPageBody(await sha256Hex(pageUrl), body); } catch (e) { /* caché opcional */ }
+        }
+        const ops = opsByPage.get(pageUrl) || [];
+        const effective = ops.length > 0 ? QHP.shared.applyOpsToPageBody(body, ops) : body;
+        pages.push({ pageUrl, annotations: QHP.shared.liveAnnotations(effective) });
+    }
+    // Páginas creadas offline que aún no existen en Drive: solo viven en la cola.
+    for (const [pageUrl, ops] of opsByPage) {
+        if (bodies.has(pageUrl)) continue;
+        const effective = QHP.shared.applyOpsToPageBody(QHP.shared.emptyPageBody(pageUrl), ops);
+        pages.push({ pageUrl, annotations: QHP.shared.liveAnnotations(effective) });
+    }
+    return { ok: true, pages, fromCache };
+}
+/**
+ * files.list vacío es autoritativo: la página no existe en Drive (p. ej.
+ * appDataFolder vaciado externamente) y se devuelve un cuerpo vacío, que
+ * también pisará la caché. Los fallos de red, en cambio, se lanzan.
+ */
+async function fetchRemotePageBody(pageUrl, hash) {
+    const file = await findPageFile(pageFileName(hash));
+    if (!file) return QHP.shared.emptyPageBody(pageUrl);
+    const body = await downloadPageBody(file.id);
+    if (!body || typeof body !== 'object' || !body.annotations) return QHP.shared.emptyPageBody(pageUrl);
+    return body;
 }
 
+async function handleSaveAnnotation(request) {
+    if (!request.pageUrl || !request.annotation || !request.annotation.id) {
+        throw new Error('payload inválido para drive:saveAnnotation');
+    }
+    await enqueueOp({ type: 'upsert', pageUrl: request.pageUrl, annotation: request.annotation, ts: Date.now() });
+    return { ok: true };
+}
+
+async function handleRemoveAnnotation(request) {
+    if (!request.pageUrl || !request.annotationId) {
+        throw new Error('payload inválido para drive:removeAnnotation');
+    }
+    await enqueueOp({ type: 'delete', pageUrl: request.pageUrl, annotationId: request.annotationId, ts: Date.now() });
+    return { ok: true };
+}
+
+/**
+ * [大慈恩版] 即時同步：回答「這一頁的雲端現在是什麼狀態」。
+ * service worker 會被 Chrome 休眠，所以這裡不記任何狀態，由頁面帶著上次的 stamp 來問：
+ *   stamp 相同 → 不下載內容；不同 → 回傳目前（已套用待上傳佇列）的標註，讓頁面比對內容。
+ */
+async function handlePollPage(request) {
+    const pageUrl = String(request.pageUrl || '');
+    if (!pageUrl) throw new Error('pageUrl requerido');
+    const session = await getDriveSession();
+    if (!session.signedIn || session.needsReauth) return { ok: true, stamp: '' };
+    try {
+        const file = await withTimeout(findPageFile(pageFileName(await sha256Hex(pageUrl))), DRIVE.LOAD_TIMEOUT_MS * 2);
+        const stamp = file ? file.modifiedTime : '';
+        const pendingOps = (await readQueue()).filter((op) => op.pageUrl === pageUrl);
+        if (pendingOps.length === 0 && request.known !== undefined && request.known === stamp) {
+            return { ok: true, stamp };
+        }
+        let body = file ? await withTimeout(downloadPageBody(file.id), DRIVE.LOAD_TIMEOUT_MS * 2) : null;
+        if (!body || typeof body !== 'object' || !body.annotations) body = QHP.shared.emptyPageBody(pageUrl);
+        const effective = pendingOps.length > 0 ? QHP.shared.applyOpsToPageBody(body, pendingOps) : body;
+        return { ok: true, stamp, annotations: QHP.shared.liveAnnotations(effective) };
+    } catch (error) {
+        return { ok: false, code: error && error.code, error: String((error && error.message) || error) };
+    }
+}
+
+async function handleStats() {
+    const fields = encodeURIComponent('nextPageToken,files(id,size,appProperties)');
+    const q = encodeURIComponent("name contains 'page-'");
+    let pageToken = null;
+    let usedBytes = 0;
+    let pageCount = 0;
+    let itemCount = 0;
+    do {
+        const tokenParam = pageToken ? `&pageToken=${encodeURIComponent(pageToken)}` : '';
+        const response = await driveFetch(
+            `${DRIVE.API}/files?spaces=appDataFolder&q=${q}&pageSize=1000&fields=${fields}${tokenParam}`
+        );
+        const body = await response.json();
+        for (const file of (body && body.files) || []) {
+            pageCount += 1;
+            usedBytes += Number(file.size || 0);
+            itemCount += Number((file.appProperties && file.appProperties.qhpAnnotations) || 0);
+        }
+        pageToken = (body && body.nextPageToken) || null;
+    } while (pageToken);
+
+    // Sin cuota relevante en appDataFolder: total/percentUsed no aplican.
+    return { backend: 'drive', used: usedBytes, total: null, percentUsed: null, itemCount, pageCount };
+}
+
+// ---------------------------------------------------------------------
+// Reanudación: al despertar el SW (arranque de Chrome o primer mensaje),
+// si quedó cola pendiente de una sesión anterior, retomar el flush.
+// ---------------------------------------------------------------------
+
+chrome.alarms.onAlarm.addListener((alarm) => {
+    if (alarm.name === DRIVE.FLUSH_ALARM) flushQueue();
+});
+
+(async () => {
+    try {
+        const session = await getDriveSession();
+        if (!session.signedIn || session.needsReauth) return;
+        const queue = await readQueue();
+        const absorbPending = await getLocal(DRIVE.ABSORB_PENDING_KEY);
+        if (queue.length > 0 || absorbPending) {
+            await ensureFlushAlarm();
+            flushQueue();
+        }
+    } catch (e) {
+        console.warn('QHP Drive: comprobación de cola al despertar falló:', e);
+    }
+})();

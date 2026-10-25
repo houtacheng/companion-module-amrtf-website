@@ -1,0 +1,897 @@
+document.addEventListener('DOMContentLoaded', () => {
+    // --- ELEMENTS ---
+    const resizeHandle = document.getElementById('resize-handle');
+    const lockButton = document.getElementById('lock-button');
+    const configButton = document.getElementById('config-button');
+    const panelButton = document.getElementById('panel-button');
+    const closeButton = document.getElementById('close-button');
+    const annotationsList = document.getElementById('annotations-list');
+    const forceBlackSwitch = document.getElementById('force-black-switch');
+    const forceSolidSwitch = document.getElementById('force-solid-switch');
+    const disablePageSwitch = document.getElementById('disable-page-switch');
+    const disableDomainSwitch = document.getElementById('disable-domain-switch');
+    const sidebarDarkModeSwitch = document.getElementById('sidebar-dark-mode-switch');
+    const configPopup = document.getElementById('config-popup');
+    const languageSelectWrapper = document.getElementById('language-select-wrapper');
+    const websiteInfoCard = document.getElementById('website-info-card');
+    const websiteFavicon = document.getElementById('website-favicon');
+    const websiteTitle = document.getElementById('website-title');
+    const websiteDescription = document.getElementById('website-description');
+    const websiteDomain = document.getElementById('website-domain');
+    const refreshButtons = document.querySelectorAll('.refresh-button');
+    const refreshContainer = document.getElementById('refresh-container');
+    const refreshToast = document.getElementById('refresh-toast');
+    const refreshToastText = document.getElementById('refresh-toast-text');
+    const tooltip = document.getElementById('tooltip');
+    const syncDisconnectedState = document.getElementById('sync-disconnected');
+    const syncConnectedState = document.getElementById('sync-connected');
+    const syncReauthState = document.getElementById('sync-reauth');
+    const syncAccount = document.getElementById('sync-account');
+    const syncLastSync = document.getElementById('sync-last-sync');
+    const syncStats = document.getElementById('sync-stats');
+    const syncPending = document.getElementById('sync-pending');
+    const syncConnectButton = document.getElementById('sync-connect-button');
+    const syncDisconnectButton = document.getElementById('sync-disconnect-button');
+    const syncReconnectButton = document.getElementById('sync-reconnect-button');
+    const syncModalOverlay = document.getElementById('sync-modal-overlay');
+    const syncModalTitle = document.getElementById('sync-modal-title');
+    const syncModalText = document.getElementById('sync-modal-text');
+    const syncModalNote = document.getElementById('sync-modal-note');
+    const syncModalPrimary = document.getElementById('sync-modal-primary');
+    const syncModalSecondary = document.getElementById('sync-modal-secondary');
+    const disclosureOverlay = document.getElementById('disclosure-modal-overlay');
+    const disclosureTitle = document.getElementById('disclosure-modal-title');
+    const disclosureIntro = document.getElementById('disclosure-modal-intro');
+    const disclosureBody = document.getElementById('disclosure-modal-body');
+    const disclosureLink = document.getElementById('disclosure-modal-link');
+    const disclosureAccept = document.getElementById('disclosure-modal-accept');
+
+    // --- STATE ---
+    let myTabId = null;
+    let currentPageUrl = null; // pageUrl normalizada del content script (para el panel global)
+    let isLocked = false;
+    let lastStoredWidth = 420;
+    let settings = {
+        useDarkText: false,
+        sidebarDarkMode: false,
+        forceSolidHighlights: false,
+    };
+
+    // --- FLOATING UI ---
+    const { computePosition, offset, flip, shift } = FloatingUIDOM;
+
+    // --- TOOLTIP ---
+    const setupTooltip = (trigger, key) => {
+        const showTooltip = (e) => {
+            const message = chrome.i18n.getMessage(key);
+            if (!message) return;
+
+            tooltip.textContent = message;
+            tooltip.style.display = 'block';
+            
+            computePosition(e.target, tooltip, {
+                placement: 'top',
+                middleware: [offset(5), flip(), shift({ padding: 5 })]
+            }).then(({ x, y }) => {
+                Object.assign(tooltip.style, {
+                    left: `${x}px`,
+                    top: `${y}px`,
+                });
+            });
+        };
+
+        const hideTooltip = () => {
+            tooltip.style.display = 'none';
+        };
+
+        const updatePosition = (e) => {
+            if (tooltip.style.display === 'block') {
+                computePosition(e.target, tooltip, {
+                    placement: 'top',
+                    middleware: [offset(5), flip(), shift({ padding: 5 })]
+                }).then(({ x, y }) => {
+                    Object.assign(tooltip.style, {
+                        left: `${x}px`,
+                        top: `${y}px`,
+                    });
+                });
+            }
+        };
+
+        trigger.addEventListener('mouseover', showTooltip);
+        trigger.addEventListener('mouseout', hideTooltip);
+        trigger.addEventListener('mousemove', updatePosition);
+    };
+
+    // --- CORE FUNCTIONS ---
+
+    function saveSettings() {
+        chrome.storage.sync.set({ 'highlighter-settings': settings });
+        if (myTabId) {
+            chrome.tabs.sendMessage(myTabId, {
+                action: 'settingChanged',
+                settings: settings
+            });
+        }
+    }
+
+    function applyDarkMode() {
+        document.body.classList.toggle('dark-mode', settings.sidebarDarkMode);
+    }
+
+    function localizeUI() {
+        document.querySelectorAll('[data-i18n-key]').forEach(el => {
+            const key = el.dataset.i18nKey;
+            const message = chrome.i18n.getMessage(key);
+            if (message) {
+                if (el.tagName === 'H2' || el.tagName === 'H3' || el.tagName === 'LABEL' || el.tagName === 'SPAN' || el.tagName === 'P') {
+                    el.textContent = message;
+                } else {
+                    el.setAttribute('aria-label', message);
+                }
+            }
+        });
+        const lockLabelKey = isLocked ? 'unlockSidebarWidth' : 'lockSidebarWidth';
+        const lockLabel = chrome.i18n.getMessage(lockLabelKey);
+        lockButton.setAttribute('aria-label', lockLabel);
+    }
+
+    function updateAnnotationTextStyles() {
+        annotationsList.classList.toggle('dark-text', settings.useDarkText);
+    }
+
+    function updateSwitchStates() {
+        if (!myTabId) {
+            disablePageSwitch.disabled = true;
+            disableDomainSwitch.disabled = true;
+            return;
+        }
+    
+        chrome.tabs.sendMessage(myTabId, { action: 'getPageInfo' }, (response) => {
+            if (chrome.runtime.lastError || !response || !response.url) {
+                console.warn("Highlighter: Could not get page info for switch states.", chrome.runtime.lastError?.message);
+                disablePageSwitch.disabled = true;
+                disableDomainSwitch.disabled = true;
+                return;
+            }
+    
+            const { url, domain } = response;
+    
+            chrome.storage.sync.get(['disabledPages', 'disabledSites'], (data) => {
+                if (chrome.runtime.lastError) {
+                    console.warn("Highlighter: Error getting disabled sites/pages.", chrome.runtime.lastError);
+                    return;
+                }
+                const disabledPages = data.disabledPages || [];
+                const disabledSites = data.disabledSites || [];
+    
+                disablePageSwitch.checked = disabledPages.includes(url);
+                disableDomainSwitch.checked = disabledSites.includes(domain);
+    
+                disablePageSwitch.disabled = false;
+                disableDomainSwitch.disabled = false;
+            });
+        });
+    }
+
+    // --- RESIZE AND LOCK LOGIC ---
+
+    const setLockedState = (locked) => {
+        isLocked = locked;
+        document.body.classList.toggle('locked', locked);
+        const lockLabelKey = isLocked ? 'unlockSidebarWidth' : 'lockSidebarWidth';
+        lockButton.setAttribute('aria-label', chrome.i18n.getMessage(lockLabelKey));
+        chrome.storage.sync.set({ sidebarLocked: locked });
+
+        if (!myTabId) return;
+
+        if (locked) {
+            chrome.tabs.sendMessage(myTabId, { action: 'getSidebarWidth' }, (response) => {
+                if (chrome.runtime.lastError) { console.warn(chrome.runtime.lastError.message); return; }
+                if (response && response.width) {
+                    lastStoredWidth = response.width;
+                    chrome.storage.sync.set({ sidebarWidth: response.width });
+                }
+            });
+        } else {
+            chrome.tabs.sendMessage(myTabId, { action: 'setSidebarWidth', width: lastStoredWidth });
+        }
+    };
+
+    // --- POPUP AND UI LOGIC ---
+
+    const showPopup = () => {
+        configPopup.style.display = 'block';
+        refreshSyncSection(true); // estado de Drive + stats frescos al abrir
+        computePosition(configButton, configPopup, {
+            placement: 'bottom-end',
+            middleware: [offset(5), flip(), shift({ padding: 5 })],
+        }).then(({ x, y }) => {
+            configPopup.style.left = `${x}px`;
+            configPopup.style.top = `${y}px`;
+        });
+    };
+
+    const hidePopup = () => {
+        configPopup.style.display = 'none';
+    };
+
+    // --- GOOGLE DRIVE SYNC (F2.5) ---
+    // El service worker es quien habla con Drive; el sidebar solo manda
+    // mensajes drive:* y pinta el estado (sección de ajustes + modal).
+
+    const DRIVE_SESSION_KEY = 'qhp-drive-session';
+    const DRIVE_PROMO_SHOWN_KEY = 'qhp-drive-promo-shown';
+    const msg = (key, subs) => chrome.i18n.getMessage(key, subs);
+
+    function sendDrive(message) {
+        return new Promise((resolve) => {
+            try {
+                chrome.runtime.sendMessage(message, (response) => {
+                    if (chrome.runtime.lastError) {
+                        resolve({ ok: false, error: chrome.runtime.lastError.message });
+                        return;
+                    }
+                    resolve(response || { ok: false, error: 'no-response' });
+                });
+            } catch (e) {
+                resolve({ ok: false, error: String(e) });
+            }
+        });
+    }
+
+    let syncModalHandlers = { primary: null, secondary: null };
+
+    function showSyncModal({ title, text, note, primaryLabel, secondaryLabel, onPrimary, onSecondary }) {
+        syncModalTitle.textContent = title || '';
+        syncModalText.textContent = text || '';
+        if (note) {
+            syncModalNote.textContent = note;
+            syncModalNote.style.display = 'block';
+        } else {
+            syncModalNote.style.display = 'none';
+        }
+        syncModalPrimary.querySelector('span').textContent = primaryLabel || msg('close');
+        syncModalPrimary.disabled = false;
+        if (secondaryLabel) {
+            syncModalSecondary.querySelector('span').textContent = secondaryLabel;
+            syncModalSecondary.style.display = 'block';
+        } else {
+            syncModalSecondary.style.display = 'none';
+        }
+        syncModalHandlers = { primary: onPrimary || hideSyncModal, secondary: onSecondary || hideSyncModal };
+        syncModalOverlay.style.display = 'flex';
+    }
+
+    function hideSyncModal() {
+        syncModalOverlay.style.display = 'none';
+        syncModalHandlers = { primary: null, secondary: null };
+    }
+
+    // --- AVISO DE PRÁCTICAS DE DATOS (divulgación destacada, política CWS 2026) ---
+    function hideDisclosure() {
+        if (disclosureOverlay) disclosureOverlay.style.display = 'none';
+    }
+
+    function maybeShowDisclosure() {
+        const disclosure = globalThis.QHP && globalThis.QHP.disclosure;
+        if (!disclosure || !disclosureOverlay) return;
+        disclosure.getState((state) => {
+            if (!state.needed) return;
+            const content = disclosure.content(state.mode);
+            disclosureTitle.textContent = content.title;
+            disclosureIntro.textContent = content.intro;
+            const fragments = [];
+            const addList = (headingText, items) => {
+                const h4 = document.createElement('h4');
+                h4.textContent = headingText;
+                const ul = document.createElement('ul');
+                items.forEach((item) => {
+                    const li = document.createElement('li');
+                    li.textContent = item;
+                    ul.appendChild(li);
+                });
+                fragments.push(h4, ul);
+            };
+            if (content.changes.length > 0) addList(content.changesHeading, content.changes);
+            addList(content.practicesHeading, content.items);
+            disclosureBody.replaceChildren(...fragments);
+            disclosureLink.href = content.url;
+            disclosureLink.querySelector('span').textContent = content.link;
+            disclosureAccept.querySelector('span').textContent = content.accept;
+            disclosureOverlay.style.display = 'flex';
+        });
+    }
+
+    if (disclosureAccept) {
+        disclosureAccept.addEventListener('click', () => {
+            const disclosure = globalThis.QHP && globalThis.QHP.disclosure;
+            if (disclosure) disclosure.acknowledge(hideDisclosure);
+            else hideDisclosure();
+        });
+    }
+
+    chrome.storage.onChanged.addListener((changes, namespace) => {
+        const disclosure = globalThis.QHP && globalThis.QHP.disclosure;
+        // Aceptado desde otra superficie (página, panel u otro dispositivo).
+        if (namespace === 'sync' && disclosure && changes[disclosure.ACK_KEY]) hideDisclosure();
+    });
+
+    let syncRefreshSeq = 0;
+
+    async function refreshSyncSection(includeStats = false) {
+        const seq = ++syncRefreshSeq;
+        const status = await sendDrive({ action: 'drive:status' });
+        if (seq !== syncRefreshSeq) return; // llegó una actualización más nueva
+
+        const ok = status && status.ok !== false;
+        const signedIn = ok && !!status.signedIn;
+        const needsReauth = signedIn && !!status.needsReauth;
+
+        syncDisconnectedState.style.display = !signedIn ? 'block' : 'none';
+        syncReauthState.style.display = needsReauth ? 'block' : 'none';
+        syncConnectedState.style.display = signedIn && !needsReauth ? 'block' : 'none';
+        if (!signedIn || needsReauth) return;
+
+        syncAccount.textContent = status.account || msg('syncConnectedLabel');
+
+        if (status.lastSyncAt) {
+            syncLastSync.textContent = msg('syncLastSyncLabel', [new Date(status.lastSyncAt).toLocaleString()]);
+            syncLastSync.style.display = 'block';
+        } else {
+            syncLastSync.style.display = 'none';
+        }
+
+        if (status.queueLength > 0) {
+            syncPending.textContent = msg('syncPendingLine', [String(status.queueLength)]);
+            syncPending.style.display = 'block';
+        } else {
+            syncPending.style.display = 'none';
+        }
+
+        if (includeStats) {
+            syncStats.textContent = '…';
+            syncStats.style.display = 'block';
+            const stats = await sendDrive({ action: 'drive:stats' });
+            if (seq !== syncRefreshSeq) return;
+            if (stats && stats.backend === 'drive') {
+                syncStats.textContent = msg('syncStatsLine', [String(stats.pageCount || 0), String(stats.itemCount || 0)]);
+            } else {
+                syncStats.style.display = 'none';
+            }
+        }
+    }
+
+    async function connectDrive(button) {
+        const label = button.querySelector('span');
+        const originalText = label.textContent;
+        button.disabled = true;
+        label.textContent = msg('syncConnecting');
+        const response = await sendDrive({ action: 'drive:signIn' });
+        button.disabled = false;
+        label.textContent = originalText;
+        if (response && response.ok) {
+            hideSyncModal();
+            showToast('syncConnectedToast');
+            refreshSyncSection(true);
+        } else {
+            showToast('syncConnectFailedToast');
+        }
+    }
+
+    function requestDisconnect() {
+        showSyncModal({
+            title: msg('syncDisconnectTitle'),
+            text: msg('syncDisconnectWarning'),
+            primaryLabel: msg('syncDisconnectButton'),
+            secondaryLabel: msg('cancel'),
+            onPrimary: () => performSignOut(false),
+            onSecondary: hideSyncModal,
+        });
+    }
+
+    async function performSignOut(force) {
+        syncModalPrimary.disabled = true;
+        const response = await sendDrive({ action: 'drive:signOut', force });
+        syncModalPrimary.disabled = false;
+
+        if (response && response.ok) {
+            const copied = response.copied || { annotations: 0, pages: 0 };
+            showSyncModal({
+                title: msg('syncDisconnectDoneTitle'),
+                text: msg('syncDisconnectDoneText', [String(copied.annotations), String(copied.pages)]),
+                note: response.fromCache ? msg('syncCopyFromCacheNote') : null,
+                primaryLabel: msg('close'),
+                onPrimary: hideSyncModal,
+            });
+            refreshSyncSection(false);
+        } else if (response && response.error === 'pending-ops') {
+            showSyncModal({
+                title: msg('syncDisconnectPendingTitle'),
+                text: msg('syncDisconnectPendingWarning', [String(response.pendingOps)]),
+                primaryLabel: msg('syncModalContinue'),
+                secondaryLabel: msg('cancel'),
+                onPrimary: () => performSignOut(true),
+                onSecondary: hideSyncModal,
+            });
+        } else if (response && response.error === 'local-quota') {
+            showSyncModal({
+                title: msg('syncQuotaErrorTitle'),
+                text: msg('syncQuotaErrorText'),
+                primaryLabel: msg('close'),
+                onPrimary: hideSyncModal,
+            });
+        } else {
+            hideSyncModal();
+            showToast('syncGenericErrorToast');
+        }
+    }
+
+    // Modal de primera vez (una sola: flag qhp-drive-promo-shown en local).
+    async function maybeShowSyncPromo() {
+        try {
+            const status = await sendDrive({ action: 'drive:status' });
+            if (!status || status.ok === false || status.signedIn) return;
+            const stored = await new Promise(resolve => chrome.storage.local.get(DRIVE_PROMO_SHOWN_KEY, resolve));
+            if (stored && stored[DRIVE_PROMO_SHOWN_KEY]) return;
+            await new Promise(resolve => chrome.storage.local.set({ [DRIVE_PROMO_SHOWN_KEY]: true }, resolve));
+            showSyncModal({
+                title: msg('syncPromoTitle'),
+                text: msg('syncDisconnectedText'),
+                primaryLabel: msg('syncModalConnect'),
+                secondaryLabel: msg('syncModalNotNow'),
+                onPrimary: () => connectDrive(syncModalPrimary),
+                onSecondary: hideSyncModal,
+            });
+        } catch (e) {
+            // sin promo si algo falla; no es crítico
+        }
+    }
+
+    syncConnectButton.addEventListener('click', () => connectDrive(syncConnectButton));
+    syncReconnectButton.addEventListener('click', () => connectDrive(syncReconnectButton));
+    syncDisconnectButton.addEventListener('click', requestDisconnect);
+    syncModalPrimary.addEventListener('click', () => { if (syncModalHandlers.primary) syncModalHandlers.primary(); });
+    syncModalSecondary.addEventListener('click', () => { if (syncModalHandlers.secondary) syncModalHandlers.secondary(); });
+    syncModalOverlay.addEventListener('click', (e) => {
+        if (e.target !== syncModalOverlay) return;
+        const dismiss = syncModalHandlers.secondary || syncModalHandlers.primary;
+        if (dismiss) dismiss();
+    });
+
+    // El flag de sesión lo escribe solo el service worker; reflejarlo en vivo.
+    chrome.storage.onChanged.addListener((changes, namespace) => {
+        if (namespace !== 'local' || !changes[DRIVE_SESSION_KEY]) return;
+        refreshSyncSection(configPopup.style.display === 'block');
+    });
+
+    // --- ANNOTATION RENDERING ---
+
+    // --- ANNOTATION RENDERING ---
+
+    function renderAnnotations(annotations) {
+        const emptyStateContent = document.getElementById('empty-state-content');
+        const hasAnnotations = annotations && annotations.length > 0;
+
+        annotationsList.classList.toggle('is-hidden', !hasAnnotations);
+        emptyStateContent.classList.toggle('is-hidden', hasAnnotations);
+        refreshContainer.classList.toggle('visible', hasAnnotations);
+
+        if (!hasAnnotations) {
+            annotationsList.innerHTML = '';
+            return;
+        }
+
+        const annotationsContainer = annotationsList;
+        const existingNodesMap = new Map();
+        annotationsContainer.querySelectorAll('.annotation-card').forEach(node => {
+            existingNodesMap.set(node.dataset.annotationId, node);
+        });
+
+        const receivedIds = new Set(annotations.map(([id]) => id));
+
+        // 1. Remove nodes that are no longer in the annotations list.
+        // This happens if a deletion was finalized while the sidebar was closed.
+        for (const [id, node] of existingNodesMap.entries()) {
+            if (!receivedIds.has(id)) {
+                node.remove();
+                existingNodesMap.delete(id);
+            }
+        }
+
+        // 2. Iterate through the new sorted list and reconcile with the DOM.
+        let lastNode = null; 
+        annotations.forEach(([id, annotation]) => {
+            let node = existingNodesMap.get(id);
+
+            if (node) {
+                // If the node already exists, update its content if necessary.
+                const textEl = node.querySelector('.text');
+                const commentEl = node.querySelector('.comment');
+                const colorBar = node.querySelector('.annotation-color-bar');
+
+                if (annotation.type !== 'note' && textEl.innerHTML !== annotation.text) {
+                    textEl.innerHTML = annotation.text;
+                }
+                const newCommentHtml = annotation.comment ? annotation.comment : `<span class="no-comment-placeholder">${chrome.i18n.getMessage('noComment')}</span>`;
+                if (commentEl.innerHTML !== newCommentHtml) {
+                    commentEl.innerHTML = newCommentHtml;
+                }
+                if (colorBar.style.backgroundColor !== annotation.color) {
+                    colorBar.style.backgroundColor = annotation.color;
+                }
+                node.dataset.comment = annotation.comment || '';
+                node.classList.toggle('orphaned', !!annotation.orphaned);
+                node.title = annotation.orphaned ? chrome.i18n.getMessage('annotationOrphanTooltip') : '';
+            } else {
+                // If the node doesn't exist, create it.
+                node = createAnnotationCard(id, annotation);
+                node.classList.add('newly-added');
+                node.addEventListener('animationend', () => node.classList.remove('newly-added'), { once: true });
+            }
+
+            // 3. Ensure the node is in the correct position.
+            if (!lastNode) {
+                if (annotationsContainer.firstChild !== node) {
+                    annotationsContainer.prepend(node);
+                }
+            } else {
+                if (lastNode.nextSibling !== node) {
+                    lastNode.after(node);
+                }
+            }
+            lastNode = node;
+        });
+    }
+
+    function createAnnotationCard(id, annotation) {
+        const card = document.createElement('div');
+        card.className = 'annotation-card';
+        card.dataset.annotationId = id;
+        card.dataset.comment = annotation.comment || '';
+        if (annotation.orphaned) {
+            card.classList.add('orphaned');
+            card.title = chrome.i18n.getMessage('annotationOrphanTooltip');
+        }
+
+        const colorBar = document.createElement('div');
+        colorBar.className = 'annotation-color-bar';
+        colorBar.style.backgroundColor = annotation.color;
+        card.appendChild(colorBar);
+
+        const mainContent = document.createElement('div');
+        mainContent.className = 'main-content';
+        
+        const text = document.createElement('div');
+        text.className = 'text';
+        text.innerHTML = annotation.text;
+        if (annotation.type === 'note') {
+            // Nota de página (sin anclaje): etiqueta en lugar de cita.
+            card.classList.add('page-note');
+            text.textContent = chrome.i18n.getMessage('panelPageNoteLabel');
+        }
+        
+        const commentDisplay = document.createElement('div');
+        commentDisplay.className = 'comment';
+        commentDisplay.innerHTML = annotation.comment ? annotation.comment : `<span class="no-comment-placeholder">${chrome.i18n.getMessage('noComment')}</span>`;
+        
+        mainContent.appendChild(text);
+        mainContent.appendChild(commentDisplay);
+
+        const actionsContainer = document.createElement('div');
+        actionsContainer.className = 'actions-container';
+        
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'delete-btn';
+        deleteBtn.setAttribute('aria-label', chrome.i18n.getMessage('deleteAnnotation'));
+        deleteBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M9 5C9 3.89543 9.89543 3 11 3H13C14.1046 3 15 3.89543 15 5V6H17H19C19.5523 6 20 6.44772 20 7C20 7.55228 19.5523 8 19 8H18V18C18 19.6569 16.6569 21 15 21H9C7.34315 21 6 19.6569 6 18V8H5C4.44772 8 4 7.55228 4 7C4 6.44772 4.44772 6 5 6H7H9V5ZM10 8H8V18C8 18.5523 8.44772 19 9 19H15C15.5523 19 16 18.5523 16 18V8H14H10ZM13 6H11V5H13V6ZM10 9C10.5523 9 11 9.44772 11 10V17C11 17.5523 10.5523 18 10 18C9.44772 18 9 17.5523 9 17V10C9 9.44772 9.44772 9 10 9ZM14 9C14.5523 9 15 9.44772 15 10V17C15 17.5523 14.5523 18 14 18C13.4477 18 13 17.5523 13 17V10C13 9.44772 13.4477 9 14 9Z" fill="currentColor"/></svg>`;
+        actionsContainer.appendChild(deleteBtn);
+
+        card.appendChild(mainContent);
+        card.appendChild(actionsContainer);
+
+        mainContent.addEventListener('click', () => {
+            // Nota de página: no hay resaltado al que desplazarse.
+            if (card.classList.contains('page-note')) return;
+            // Huérfana: el resaltado no está en la página, no hay a dónde
+            // desplazarse. El anclaje se reintenta solo en cada visita.
+            if (card.classList.contains('orphaned')) {
+                showToast('annotationOrphanToast');
+                return;
+            }
+            if (myTabId) {
+                chrome.tabs.sendMessage(myTabId, { action: 'scrollToAnnotation', annotationId: id });
+            }
+        });
+
+        deleteBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (myTabId) {
+                chrome.tabs.sendMessage(myTabId, { action: 'deleteAnnotation', annotationId: id });
+            }
+        });
+
+        return card;
+    }
+
+    function showToast(messageKey) {
+        const message = chrome.i18n.getMessage(messageKey);
+        refreshToastText.textContent = message;
+        if (refreshContainer.classList.contains('visible')) {
+            const containerHeight = refreshContainer.offsetHeight;
+            refreshToast.style.bottom = `${containerHeight + 10}px`;
+        } else {
+            refreshToast.style.bottom = '20px';
+        }
+        refreshToast.classList.add('show');
+        setTimeout(() => {
+            refreshToast.classList.remove('show');
+        }, 2200);
+    }
+
+    function loadAnnotations(showToastOnComplete = false) {
+        if (!myTabId) {
+            renderAnnotations([]);
+            return;
+        }
+
+        refreshButtons.forEach(button => {
+            button.classList.add('refreshing');
+            button.disabled = true;
+        });
+
+        // Ask the content script to send us a fresh, sorted list of annotations.
+        // The response will be handled by the 'annotationsUpdated' message listener.
+        chrome.tabs.sendMessage(myTabId, { action: 'requestRefresh' }, (response) => {
+            setTimeout(() => {
+                refreshButtons.forEach(button => {
+                    button.classList.remove('refreshing');
+                    button.disabled = false;
+                });
+            }, 600);
+
+            if (chrome.runtime.lastError) {
+                console.warn(`Highlighter: Could not connect to refresh. ${chrome.runtime.lastError.message}`);
+                annotationsList.innerHTML = `<p>${chrome.i18n.getMessage('errorLoading')}</p>`;
+                return;
+            }
+
+            if (showToastOnComplete) {
+                showToast('annotationsRefreshed');
+            }
+        });
+    }
+
+    function loadPageInfo() {
+        if (!myTabId) return;
+        chrome.tabs.sendMessage(myTabId, { action: 'getPageInfo' }, (response) => {
+            if (chrome.runtime.lastError) {
+                console.warn(`Highlighter: Could not get page info. ${chrome.runtime.lastError.message}`);
+                websiteInfoCard.style.display = 'none';
+                return;
+            }
+            if (response) {
+                currentPageUrl = response.pageUrl || null;
+                websiteTitle.textContent = response.title || 'No Title';
+                websiteDescription.textContent = response.description || 'No description available.';
+                websiteDomain.textContent = response.domain || '';
+                if (response.favicon) {
+                    websiteFavicon.src = response.favicon;
+                    websiteFavicon.style.display = 'block';
+                } else {
+                    websiteFavicon.style.display = 'none';
+                }
+                if (response.image) {
+                    websiteInfoCard.style.backgroundImage = `url('${response.image}')`;
+                    websiteInfoCard.classList.add('has-image');
+                } else {
+                    websiteInfoCard.style.backgroundImage = '';
+                    websiteInfoCard.classList.remove('has-image');
+                }
+                websiteInfoCard.style.display = 'flex';
+            } else {
+                websiteInfoCard.style.display = 'none';
+            }
+        });
+    }
+
+    // --- EVENT LISTENERS ---
+    refreshButtons.forEach(button => {
+        button.addEventListener('click', () => loadAnnotations(true));
+    });
+
+    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+        if (sender.tab && sender.tab.id !== myTabId) {
+            return;
+        }
+        if (request.action === 'annotationsUpdated') {
+            renderAnnotations(request.data);
+        }
+        if (request.action === 'animateDelete') {
+            const node = document.querySelector(`[data-annotation-id="${request.annotationId}"]`);
+            const canAnimate = !!(node && !node.classList.contains('deleting'));
+            if (canAnimate) {
+                // Set dynamic height for smooth collapse via CSS variable
+                node.style.setProperty('--card-height', `${node.offsetHeight}px`);
+                // Trigger CSS slideOut animation
+                node.classList.add('deleting');
+                // When animation finishes, ask content script to finalize deletion
+                node.addEventListener('animationend', () => {
+                    if (myTabId) {
+                        chrome.tabs.sendMessage(myTabId, {
+                            action: 'finalizeDelete',
+                            annotationId: request.annotationId
+                        });
+                    }
+                }, { once: true });
+            }
+            // Always ACK so the sender knows whether we will animate
+            try { sendResponse({ ok: canAnimate }); } catch (e) { /* no-op */ }
+        }
+        if (request.action === 'settingsChanged') {
+            // Re-initialize to get the latest settings for the switches
+            initialize();
+        }
+    });
+
+    lockButton.addEventListener('mousedown', (e) => e.stopPropagation());
+    lockButton.addEventListener('click', () => setLockedState(!isLocked));
+    resizeHandle.addEventListener('mousedown', (e) => {
+        if (isLocked || !myTabId) return;
+        e.preventDefault();
+        chrome.tabs.sendMessage(myTabId, { action: 'startSidebarResize' });
+    });
+
+    if (panelButton) {
+        panelButton.addEventListener('click', () => {
+            chrome.runtime.sendMessage({ action: 'openAnnotationsPanel', pageUrl: currentPageUrl || undefined });
+        });
+    }
+
+    configButton.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isHidden = configPopup.style.display === 'none' || !configPopup.style.display;
+        isHidden ? showPopup() : hidePopup();
+    });
+
+    closeButton.addEventListener('click', () => {
+        if (myTabId) {
+            chrome.tabs.sendMessage(myTabId, { action: 'toggleSidebar' });
+        }
+    });
+
+    // The language selector is now managed by browser settings, this can be removed.
+    if (languageSelectWrapper) {
+        languageSelectWrapper.style.display = 'none';
+    }
+
+    forceBlackSwitch.addEventListener('change', () => {
+        settings.useDarkText = forceBlackSwitch.checked;
+        updateAnnotationTextStyles();
+        saveSettings();
+    });
+
+    forceSolidSwitch.addEventListener('change', () => {
+        settings.forceSolidHighlights = forceSolidSwitch.checked;
+        saveSettings();
+    });
+
+    sidebarDarkModeSwitch.addEventListener('change', () => {
+        settings.sidebarDarkMode = sidebarDarkModeSwitch.checked;
+        applyDarkMode();
+        saveSettings();
+    });
+
+    disablePageSwitch.addEventListener('change', (e) => {
+        if (myTabId) {
+            chrome.tabs.sendMessage(myTabId, { action: 'toggleDisablePage', disable: e.target.checked });
+        }
+    });
+
+    disableDomainSwitch.addEventListener('change', (e) => {
+        if (myTabId) {
+            chrome.tabs.sendMessage(myTabId, { action: 'toggleDisableSite', disable: e.target.checked });
+        }
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            if (syncModalOverlay.style.display === 'flex') {
+                const dismiss = syncModalHandlers.secondary || syncModalHandlers.primary;
+                if (dismiss) dismiss();
+                return;
+            }
+            if (configPopup.style.display === 'block') hidePopup();
+        }
+    });
+
+    document.addEventListener('click', (e) => {
+        if (configPopup.style.display === 'block' && !configPopup.contains(e.target) && !configButton.contains(e.target)) {
+            hidePopup();
+        }
+    });
+
+    chrome.storage.onChanged.addListener((changes, namespace) => {
+        if (namespace !== 'sync') return;
+
+        if (changes.disabledPages || changes.disabledSites) {
+            updateSwitchStates();
+        }
+        if (changes['highlighter-settings']) {
+            const newSettings = changes['highlighter-settings'].newValue;
+            settings = { ...settings, ...newSettings };
+            forceBlackSwitch.checked = settings.useDarkText;
+            sidebarDarkModeSwitch.checked = settings.sidebarDarkMode;
+            updateAnnotationTextStyles();
+            applyDarkMode();
+        }
+    });
+
+    // --- INITIALIZATION ---
+    const initialize = () => {
+        localizeUI();
+        refreshSyncSection(false);
+        maybeShowSyncPromo();
+        configButton.disabled = true;
+        disablePageSwitch.disabled = true;
+        disableDomainSwitch.disabled = true;
+        forceBlackSwitch.disabled = true;
+        forceSolidSwitch.disabled = true;
+        sidebarDarkModeSwitch.disabled = true;
+
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+            if (!tabs || tabs.length === 0) {
+                console.error("Highlighter sidebar: Could not identify the host tab.");
+                configButton.disabled = false;
+                return;
+            }
+            const currentTab = tabs[0];
+            myTabId = currentTab.id;
+
+            loadPageInfo();
+            loadAnnotations();
+
+            chrome.storage.sync.get(['sidebarLocked', 'sidebarWidth', 'highlighter-settings'], (data) => {
+                const isLocked = data.sidebarLocked === undefined ? true : data.sidebarLocked;
+                setLockedState(isLocked);
+                lastStoredWidth = Math.max(data.sidebarWidth || 420, 380);
+
+                const defaultSettings = {
+                    useDarkText: false,
+                    sidebarDarkMode: false,
+                    forceSolidHighlights: false,
+                };
+                settings = { ...defaultSettings, ...data['highlighter-settings'] };
+                
+                forceBlackSwitch.checked = settings.useDarkText;
+                forceSolidSwitch.checked = settings.forceSolidHighlights;
+                sidebarDarkModeSwitch.checked = settings.sidebarDarkMode;
+                updateAnnotationTextStyles();
+                applyDarkMode();
+                
+                updateSwitchStates();
+                
+                configButton.disabled = false;
+                forceBlackSwitch.disabled = false;
+                forceSolidSwitch.disabled = false;
+                sidebarDarkModeSwitch.disabled = false;
+
+                maybeShowDisclosure();
+            });
+        });
+    };
+
+    // Tooltip for force black switch
+    const infoIcon = document.querySelector('.info-icon[data-tooltip-key="forceBlackColorTooltip"]');
+    if (infoIcon) {
+        setupTooltip(infoIcon, 'forceBlackColorTooltip');
+    }
+
+    // Tooltip for force solid highlights switch
+    const solidInfoIcon = document.querySelector('.info-icon[data-tooltip-key="forceSolidHighlightsTooltip"]');
+    if (solidInfoIcon) {
+        setupTooltip(solidInfoIcon, 'forceSolidHighlightsTooltip');
+    }
+
+    initialize();
+});

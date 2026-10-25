@@ -1,0 +1,133 @@
+:root {
+    /* Estas variables DEBEN ser globales para que los estilos en línea de los resaltados funcionen. */
+    --highlighter-color-yellow: #ffeb68ce;
+    --highlighter-color-red: #ff9a9aa8;
+    --highlighter-color-green: #a8e6a8ad;
+    --highlighter-color-blue: #a8d1e6cb;
+    --highlighter-color-purple: #d1a8e69c;
+    --highlighter-color-pink: #e6a8d19c;
+    --highlighter-color-orange: #F9C9A1e5;
+    --highlighter-color-grey: #D8D8D8e5;
+
+    --highlighter-color-text-yellow: #2b260c;
+    --highlighter-color-text-red: #351212;
+    --highlighter-color-text-green: #1d2a1f;
+    --highlighter-color-text-blue: #0c293b;
+    --highlighter-color-text-purple: #2c1749;
+    --highlighter-color-text-pink: #50153c;
+    --highlighter-color-text-orange: #362112;
+    --highlighter-color-text-grey: #1b1b1b;
+    --highlighter-color-text-link: #023fbb;
+
+    --highlighter-color-yellow-solid: #ffd400;
+    --highlighter-color-red-solid: #ff6666;
+    --highlighter-color-green-solid: #5fb236;
+    --highlighter-color-blue-solid: #2ea8e5;
+    --highlighter-color-purple-solid: #a28ae5;
+    --highlighter-color-pink-solid: #e56eee;
+    --highlighter-color-orange-solid: #f19837;
+    --highlighter-color-grey-solid: #aaaaaa;
+}
+
+.highlighter-mark {
+    /* By not resetting all properties, we ensure that the original page's typography and layout are preserved. */
+    cursor: pointer;
+    transition: all 0.15s ease-in-out;
+    background-color: transparent; /* The actual color is applied inline via JS */
+    font: inherit;
+    /* Neutralize site styles on <mark> (e.g. Bootstrap's `mark { padding: .2em }` on gob.mx)
+       that add box spacing and shift the surrounding text. A text wrapper must never
+       contribute to layout, so these are safe to force. */
+    display: inline !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    letter-spacing: inherit !important;
+    word-spacing: inherit !important;
+    /* No !important here: the underline type sets an inline border-bottom and the
+       sidebar's focus flash sets an inline box-shadow, and inline styles must win.
+       Class specificity is still enough to beat the sites' `mark { ... }` rules. */
+    border: none;
+    box-shadow: none;
+}
+
+.highlighter-mark:hover {
+    opacity: 1;
+}
+
+/* --- Global styles for sidebar container and page body --- */
+body.highlighter-sidebar-open {
+    transition: margin-right 0.3s ease-in-out;
+}
+
+#highlighter-sidebar-instance {
+    position: fixed;
+    top: 0;
+    right: 0;
+    height: 100%;
+    border: none;
+    z-index: 9999999;
+    transition: transform 0.3s ease-in-out, width 0.3s ease-in-out;
+    transform: translateX(100%);
+}
+
+#highlighter-resize-cover {
+    position: fixed; 
+    top: 0; 
+    left: 0; 
+    width: 100vw; 
+    height: 100vh;
+    background: transparent; 
+    cursor: col-resize; 
+    z-index: 10000000;
+}
+
+#highlighter-resize-guide {
+    position: fixed; 
+    top: 0; 
+    height: 100vh; 
+    width: 2px;
+    background-image: linear-gradient(to bottom, #444 4px, transparent 4px);
+    background-size: 100% 8px;
+    z-index: 10000001;
+    pointer-events: none;
+}
+
+/* --- Local Save Toast Notification --- */
+#highlighter-local-save-toast {
+    position: fixed;
+    bottom: 10px;
+    left: 10px;
+    background-color: #fbe7c6;
+    color: #333;
+    padding: 10px 15px;
+    border-radius: 5px;
+    font-size: 12px;
+    z-index: 2147483647;
+    font-family: 'Rubik', sans-serif;
+    opacity: 0;
+    transition: opacity 0.5s ease-in-out;
+    pointer-events: none; /* So it doesn't interfere with page content */
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+#highlighter-local-save-toast.show {
+    opacity: 1;
+    pointer-events: all;
+}
+
+.highlighter-toast-close-btn {
+    background: none;
+    border: none;
+    color: #888;
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 0 0 5px;
+    transition: color 0.2s;
+}
+
+.highlighter-toast-close-btn:hover {
+    color: #000;
+}

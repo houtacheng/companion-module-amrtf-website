@@ -1,6 +1,6 @@
 # 大慈恩官網 (AMRTF) Bitfocus Companion 遠端控制系統
 
-[![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)](amrtf-website-1.1.0.tgz)
+[![Version](https://img.shields.io/badge/version-1.2.0-blue.svg)](amrtf-website-1.2.0.tgz)
 [![Companion](https://img.shields.io/badge/Bitfocus%20Companion-v3.x%20%7C%20v4.x%20%7C%20v5.x-green.svg)](https://bitfocus.io/companion)
 [![Chrome](https://img.shields.io/badge/Chrome%20Extension-Manifest%20V3-yellow.svg)](chrome-extension/)
 [![License](https://img.shields.io/badge/license-MIT-purple.svg)](companion-module-amrtf/LICENSE)
@@ -15,14 +15,16 @@
 
 本系統提供預先打包好的隨插即用安裝包，無需自行編譯：
 
-1. **Bitfocus Companion 模組安裝包**：[`amrtf-website-1.1.0.tgz`](amrtf-website-1.1.0.tgz)
+1. **Bitfocus Companion 模組安裝包**：[`amrtf-website-1.2.0.tgz`](amrtf-website-1.2.0.tgz)
    - 進入 Companion 網頁後台 -> **Connections** / **Modules**。
-   - 點擊 **「Import module package」**（匯入模組包），選擇 `amrtf-website-1.1.0.tgz` 即可一鍵安裝。
-2. **Chrome 擴充套件封裝包**：[`amrtf-chrome-extension-v1.1.0.zip`](amrtf-chrome-extension-v1.1.0.zip)
+   - 點擊 **「Import module package」**（匯入模組包），選擇 `amrtf-website-1.2.0.tgz` 即可一鍵安裝。
+2. **Chrome 擴充套件封裝包（整合版）**：[`amrtf-chrome-extension-v1.2.0.zip`](amrtf-chrome-extension-v1.2.0.zip)
    - 下載後解壓縮至任意資料夾。
    - 開啟 Chrome 瀏覽器進入 `chrome://extensions/`，開啟右上角「開發人員模式」。
    - 點擊「載入未封裝項目」，選擇解壓縮後的資料夾即可啟用。
-   - *（原始碼目錄：[`chrome-extension/`](chrome-extension/)）*
+   - *（資料夾：[`chrome-extension/`](chrome-extension/)，也可以直接載入這個資料夾）*
+   - 從 1.2.0 起，這個外掛是**整合版**：Companion 橋樑 + 「大慈恩標註筆記」（任何網站標註、筆記、Google 雲端硬碟同步）合成同一個外掛。第 7 組「標註」按鈕靠它運作：標註的顯示狀態是整個瀏覽器共用的，所有網站一起隱藏／顯示。詳見 [`chrome-extension/README-整合外掛.md`](chrome-extension/README-整合外掛.md)。
+   - **從舊版（1.1.0）升級**：舊版外掛的「檢查更新」會發現 v1.2.0 並提示下載；下載後**先移除舊版橋樑外掛**，再載入整合版（兩個同時開著會各連一次 Companion）。
 
 ---
 
@@ -32,6 +34,8 @@
 - **即時通知**：外掛內建自動版本檢測機制，背景定時（每 6 小時）向 GitHub 儲存庫比對最新發布版本。
 - **更新圖示徽章**：當 GitHub 儲存庫有新版本發布時，Chrome 工具列外掛圖示會自動亮起 **`NEW`** 藍色提示徽章。
 - **一鍵跳轉**：點開外掛彈窗即可看到新版本通知橫幅，並可直接點擊「前往 GitHub 下載更新」或點擊「🔍 檢查更新」手動即時查詢。
+- **運作方式**：讀取本儲存庫 `main` 分支的 `chrome-extension/manifest.json` 的版本號。Chrome 不允許未封裝外掛自己安裝更新，所以是「提示＋連到下載頁」；下載後覆蓋原本載入的資料夾，在 `chrome://extensions` 按「重新載入」即可（外掛 ID 與資料都不變）。
+- **發布新版**：把新版放進 `chrome-extension/` 並提高 `manifest.json` 的 `version`，推上 `main` 後，所有人的外掛就會提示更新。
 
 ### 2. 🎵 專業音訊播放控制
 - **基本控制**：播放、暫停、播放/暫停切換（按鈕背景色依播放中/暫停即時反饋）。
@@ -73,7 +77,7 @@
 
 ### 情境 A：單機運作（Companion 與 Chrome 在同台電腦）
 1. 安裝 Chrome 擴充套件，點開外掛 Popup 確認主機 IP 為 `127.0.0.1`，Port 為 `9999`。
-2. 開啟 Companion，匯入 `amrtf-website-1.1.0.tgz` 並建立連線。
+2. 開啟 Companion，匯入 `amrtf-website-1.2.0.tgz` 並建立連線。
 3. 外掛圖示顯示「已連線」綠燈，即可直接使用 Presets 預設按鈕操控！
 
 ### 情境 B：跨電腦運作（Companion 導播主機與播放電腦分開）
@@ -99,6 +103,7 @@
 | **4. 介面與顯示模式** | 播稿模式切換、捲動模式輪播切換、全螢幕切換、深淺色模式切換、字體放大/縮小 |
 | **5. 連線狀態與字幕** | 網頁連線狀態、當前字幕文字顯示（可即時閱讀目前朗讀手抄稿） |
 | **6. 前行與迴向影片** | 播放密集嘛、播放前行影片、播放迴向影片、關閉影片視窗 |
+| **7. 標註（需整合版外掛）** | 標註顯示/隱藏（按鈕顯示目前狀態與本頁標註數量）、懸浮球顯示/隱藏、標註側邊欄、全部標註 |
 
 ---
 
@@ -121,7 +126,7 @@ npm run package
 
 # 打包 Chrome 擴充套件 (.zip)
 cd ../chrome-extension
-zip -r ../amrtf-chrome-extension-v1.1.0.zip . -x "*.DS_Store*"
+zip -r ../amrtf-chrome-extension-v1.2.0.zip . -x "*.DS_Store*"
 ```
 
 ---

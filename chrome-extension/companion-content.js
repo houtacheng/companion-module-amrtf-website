@@ -7,7 +7,7 @@
   }
   window.__AMRTF_CONTENT_SCRIPT_INJECTED__ = true;
 
-  console.log('[AMRTF-Companion] Content Script 已載入 (v1.1.0)');
+  console.log('[AMRTF-Companion] Content Script 已載入 (整合版 v1.2.0)');
 
   let statusThrottleTimer = null;
   let loopConfig = { enabled: false, start: 0, end: 0 };
@@ -300,6 +300,12 @@
     return '';
   }
 
+  // [整合版] 本頁的標註數量（Companion 按鈕的「本頁N則」）
+  function countAnnotations() {
+    const h = window.highlighterInstance;
+    return h && h.annotations && typeof h.annotations.size === 'number' ? h.annotations.size : 0;
+  }
+
   function collectState() {
     const audio = getAudio();
     const currentTime = audio ? audio.currentTime : 0;
@@ -340,6 +346,7 @@
       looping: loopConfig.enabled,
       masterRange: masterRange,
       currentSubtitle: currentSubtitle,
+      annotationCount: countAnnotations(),
       isFocused: isPageActive(),
     };
   }
@@ -633,6 +640,9 @@
   document.addEventListener('fullscreenchange', scheduleThrottledStateUpdate);
 
   // 4. 監聽來自 Background 的指令
+  // [整合版] 只處理 Companion 的指令。標註外掛的訊息（刪除標註、取得頁面資訊…）要交給它自己的監聽器回應，
+  // 這裡如果也回應，會搶先回覆而讓側邊欄拿到錯的結果。
+  const COMPANION_ACTIONS = new Set(["adjust_font_size", "goto_lesson", "jump_to_master_start", "modal_close", "modal_dedication_video", "modal_migtsema", "modal_prep_video", "next_lesson", "open_course_home", "pause", "play", "play_custom_segment", "play_from_start", "prev_lesson", "query_state", "restart", "seek_absolute", "seek_relative", "seek_to", "set_font_size", "set_playback_rate", "set_scroll_mode", "set_theme", "toggle_fullscreen", "toggle_loop_segment", "toggle_play", "toggle_speech_mode"]);
   chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     if (msg.type === 'QUERY_STATUS') {
       sendResponse({
@@ -643,6 +653,7 @@
       return true;
     }
 
+    if (!msg || !COMPANION_ACTIONS.has(msg.action)) return;
     console.log('[AMRTF-Companion] 執行指令:', msg);
     const audio = getAudio();
     const action = msg.action;
@@ -901,6 +912,16 @@
     sendResponse({ success: true });
     return true;
   });
+
+  // [整合版] 標註數量變了就回報（新增、刪除、雲端同步進來都會改變）
+  let lastAnnotationCount = countAnnotations();
+  setInterval(() => {
+    const count = countAnnotations();
+    if (count !== lastAnnotationCount) {
+      lastAnnotationCount = count;
+      scheduleThrottledStateUpdate();
+    }
+  }, 2000);
 
   // 初始註冊本分頁
   sendCurrentState(true);

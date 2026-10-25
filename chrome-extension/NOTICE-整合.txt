@@ -1,0 +1,17 @@
+大慈恩官網整合外掛 - 檔案來源與修改
+====================================
+
+標註外掛（CC BY-SA 4.0，原作者 Jorge Antonio Gomez，見 LICENSE）
+  原版：https://github.com/Jorge-Antonio-Gomez/quantum-highlighter-pro-chrome-extension
+  有修改：manifest.json、script.js、background.js、annotations.html、sidebar.html、disclosure.js、_locales/*、images/icon*.png
+  新增：live-sync.js、visibility.js、sidebar-extras.js、floating-ball.js
+
+Companion 橋接（來自「大慈恩 AMRTF Companion 橋樑」外掛）
+  companion-bridge.js  ← background.js（外面包一層函式、加入標註指令）
+  companion-content.js ← content.js（只回應 Companion 指令）
+  popup.html / popup.js ← 加入標註設定區塊
+  popup-annotations.js：新增
+  mqtt.min.js：MQTT.js，MIT 授權
+
+整合時對標註外掛的修改很小：background.js 多一行 importScripts('companion-bridge.js')，
+script.js 的訊息監聽器忽略 Companion 的 QUERY_STATUS。

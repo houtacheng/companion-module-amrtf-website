@@ -69,7 +69,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   async function checkForUpdates(manual = false) {
     const repo = DEFAULT_GITHUB_REPO;
-    const curVer = currentManifest.version || '1.1.0';
+    const curVer = currentManifest.version || '1.2.0';
 
     if (manual && updateCheckStatus) {
       updateCheckStatus.textContent = '正在連線至 GitHub 檢查更新...';
@@ -140,7 +140,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         chrome.storage.local.set({ updateAvailable: false });
-        chrome.action.setBadgeText({ text: '' });
+        chrome.runtime.sendMessage({ type: 'POPUP_REFRESH_BADGE' });
       }
     } catch (err) {
       if (manual && updateCheckStatus) {
@@ -271,7 +271,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (result.updateAvailable && result.latestVersion && updateBanner) {
         updateBanner.style.display = 'block';
         updateBannerTitle.textContent = `🎉 發現新版本 v${result.latestVersion}！`;
-        updateBannerMsg.textContent = `GitHub 儲存庫已發布新版本（當前版本為 v${currentManifest.version || '1.1.0'}）。`;
+        updateBannerMsg.textContent = `GitHub 儲存庫已發布新版本（當前版本為 v${currentManifest.version || '1.2.0'}）。`;
         if (result.updateUrl) updateBannerLink.href = result.updateUrl;
       }
 
@@ -373,7 +373,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           // 腳本未就緒，嘗試自動動態注入
           chrome.scripting.executeScript({
             target: { tabId: activeTab.id },
-            files: ['content.js'],
+            files: ['companion-content.js'],
           }).then(() => {
             setTimeout(() => {
               chrome.tabs.sendMessage(activeTab.id, { type: 'QUERY_STATUS' }, (res2) => {

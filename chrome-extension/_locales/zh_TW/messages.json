@@ -1,0 +1,827 @@
+{
+  "extensionName": {
+    "message": "大慈恩官網整合外掛",
+    "description": "The name of the extension."
+  },
+  "extensionDescription": {
+    "message": "在任何網站標註與寫筆記，透過 Google 雲端硬碟與大慈恩 App 同步；並可由 Bitfocus Companion／Stream Deck 遙控大慈恩官網播放與顯示／隱藏標註。",
+    "description": "The description of the extension."
+  },
+  "sidebarTitle": {
+    "message": "標註",
+    "description": "Title for the sidebar."
+  },
+  "noAnnotationsTitle": {
+    "message": "還沒有標註",
+    "description": "Title when no annotations are present."
+  },
+  "noAnnotations": {
+    "message": "在頁面上標註文字以開始！",
+    "description": "Helper text when no annotations are present."
+  },
+  "noComment": {
+    "message": "尚無筆記",
+    "description": "Placeholder for an empty comment."
+  },
+  "annotationOrphanTooltip": {
+    "message": "在目前的頁面找不到這段標註（頁面內容可能已更動）。每次開啟頁面時都會再嘗試定位。",
+    "description": "Tooltip for an annotation whose highlight could not be located on the page."
+  },
+  "annotationOrphanToast": {
+    "message": "在此頁面找不到這段標註",
+    "description": "Toast shown when clicking an annotation whose highlight could not be located on the page."
+  },
+  "copyAnnotationText": {
+    "message": "複製文字",
+    "description": "Tooltip for the button that copies the annotation text to the clipboard."
+  },
+  "textCopiedToClipboard": {
+    "message": "文字已複製",
+    "description": "Toast shown after copying annotation text to the clipboard."
+  },
+  "deleteAnnotation": {
+    "message": "刪除標註",
+    "description": "Tooltip for the delete annotation button."
+  },
+  "lockSidebarWidth": {
+    "message": "鎖定側邊欄寬度",
+    "description": "Tooltip for the lock sidebar button."
+  },
+  "unlockSidebarWidth": {
+    "message": "解鎖側邊欄寬度",
+    "description": "Tooltip for the unlock sidebar button."
+  },
+  "settingsButton": {
+    "message": "設定",
+    "description": "Tooltip for the settings button."
+  },
+  "languageLabel": {
+    "message": "語言",
+    "description": "Label for the language selector."
+  },
+  "errorLoading": {
+    "message": "無法載入標註，請重新載入頁面。",
+    "description": "Error message when annotations fail to load."
+  },
+  "closeButton": {
+    "message": "關閉側邊欄",
+    "description": "Tooltip for the close sidebar button."
+  },
+  "disableOnPageLabel": {
+    "message": "在此頁面停用標註",
+    "description": "Label for the disable on page switch."
+  },
+  "disableOnDomainLabel": {
+    "message": "在整個網站停用標註",
+    "description": "Label for the disable on domain switch."
+  },
+  "forceBlackColorLabel": {
+    "message": "螢光標示的文字一律用深色",
+    "description": "Label for the force black text switch."
+  },
+  "forceBlackColorTooltip": {
+    "message": "讓螢光標示上的文字一律顯示為深色，在深色背景的頁面上比較容易閱讀（連結仍維持連結顏色）。",
+    "description": "Tooltip for the force black text switch."
+  },
+  "editLinkTitle": {
+    "message": "編輯連結",
+    "description": "Title for the link editor modal."
+  },
+  "textLabel": {
+    "message": "文字",
+    "description": "Label for the link text input."
+  },
+  "linkTextPlaceholder": {
+    "message": "連結文字",
+    "description": "Placeholder for the link text input."
+  },
+  "urlPlaceholder": {
+    "message": "https://example.com",
+    "description": "Placeholder for the link URL input."
+  },
+  "urlLabel": {
+    "message": "網址",
+    "description": "Label for the link URL input."
+  },
+  "unlinkButton": {
+    "message": "取消連結",
+    "description": "Button to remove a link."
+  },
+  "toolbarBold": {
+    "message": "粗體",
+    "description": "Toolbar button for bold text."
+  },
+  "toolbarItalic": {
+    "message": "斜體",
+    "description": "Toolbar button for italic text."
+  },
+  "toolbarStrike": {
+    "message": "刪除線",
+    "description": "Toolbar button for strikethrough text."
+  },
+  "toolbarBlockquote": {
+    "message": "引用",
+    "description": "Toolbar button for blockquote."
+  },
+  "toolbarCodeBlock": {
+    "message": "程式碼區塊",
+    "description": "Toolbar button for code block."
+  },
+  "toolbarLink": {
+    "message": "連結",
+    "description": "Toolbar button for link."
+  },
+  "toolbarUnderline": {
+    "message": "底線",
+    "description": "Toolbar button for underline."
+  },
+  "highlight": {
+    "message": "螢光筆",
+    "description": "Action to highlight text."
+  },
+  "underline": {
+    "message": "底線",
+    "description": "Action to underline text."
+  },
+  "delete": {
+    "message": "刪除",
+    "description": "Action to delete."
+  },
+  "comment": {
+    "message": "筆記",
+    "description": "Noun for comment."
+  },
+  "addComment": {
+    "message": "新增筆記",
+    "description": "Action to add a comment."
+  },
+  "commentPlaceholder": {
+    "message": "寫下您的筆記…",
+    "description": "Placeholder for the comment input."
+  },
+  "paragraphPlaceholder": {
+    "message": "輸入內容…",
+    "description": "Placeholder for a paragraph."
+  },
+  "listPlaceholder": {
+    "message": "清單項目",
+    "description": "Placeholder for a list item."
+  },
+  "quotePlaceholder": {
+    "message": "引用",
+    "description": "Placeholder for a quote."
+  },
+  "codePlaceholder": {
+    "message": "輸入程式碼...",
+    "description": "Placeholder for a code block."
+  },
+  "heading": {
+    "message": "標題",
+    "description": "Noun for heading."
+  },
+  "save": {
+    "message": "儲存",
+    "description": "Action to save."
+  },
+  "cancel": {
+    "message": "取消",
+    "description": "Action to cancel."
+  },
+  "close": {
+    "message": "關閉",
+    "description": "Action to close."
+  },
+  "colors_yellow": {
+    "message": "黃色",
+    "description": "The color yellow."
+  },
+  "colors_red": {
+    "message": "紅色",
+    "description": "The color red."
+  },
+  "colors_green": {
+    "message": "綠色",
+    "description": "The color green."
+  },
+  "colors_blue": {
+    "message": "藍色",
+    "description": "The color blue."
+  },
+  "colors_purple": {
+    "message": "紫色",
+    "description": "The color purple."
+  },
+  "colors_pink": {
+    "message": "粉紅色",
+    "description": "The color pink."
+  },
+  "colors_orange": {
+    "message": "橘色",
+    "description": "The color orange."
+  },
+  "colors_grey": {
+    "message": "灰色",
+    "description": "The color grey."
+  },
+  "shortcutsDisabled": {
+    "message": "在輸入欄位中停用快捷鍵。",
+    "description": "Warning message."
+  },
+  "hideUntilNextVisit": {
+    "message": "暫時隱藏（下次進入頁面再顯示）",
+    "description": "Action to hide the menu."
+  },
+  "disableOnThisPage": {
+    "message": "在此頁面停用標註",
+    "description": "Action to disable on the current page."
+  },
+  "disableOnThisWebsite": {
+    "message": "在整個網站停用標註",
+    "description": "Action to disable on the current website."
+  },
+  "openSidebar": {
+    "message": "開啟標註側邊欄",
+    "description": "Action to open the sidebar."
+  },
+  "closeSidebar": {
+    "message": "關閉標註側邊欄",
+    "description": "Action to close the sidebar."
+  },
+  "refreshAnnotations": {
+    "message": "重新載入標註",
+    "description": "Action to refresh annotations."
+  },
+  "annotationsRefreshed": {
+    "message": "標註已重新載入！",
+    "description": "Toast message after refreshing."
+  },
+  "sidebarDarkModeLabel": {
+    "message": "側邊欄深色模式",
+    "description": "Label for the sidebar dark mode switch."
+  },
+  "forceSolidHighlightsLabel": {
+    "message": "螢光標示一律用純色",
+    "description": "Label for the force solid highlights switch."
+  },
+  "forceSolidHighlightsTooltip": {
+    "message": "開啟後，螢光標示會一律使用純色，對比更明顯；關閉則會依頁面背景自動調整顏色。",
+    "description": "Tooltip for the force solid highlights switch."
+  },
+  "syncSectionTitle": {
+    "message": "Google 雲端硬碟同步",
+    "description": "Title of the Google Drive sync section in the settings popup."
+  },
+  "syncDisconnectedText": {
+    "message": "目前，您的標註透過 Chrome 同步儲存，其上限約為 100 KB。連線您的 Google 雲端硬碟，即可在各裝置間不受此限制地同步標註。請注意：雲端硬碟同步僅在保持登入狀態時有效。",
+    "description": "Explains Chrome sync limits and that Drive sync only works while signed in."
+  },
+  "syncConnectButton": {
+    "message": "連線 Google 雲端硬碟",
+    "description": "Button to start the Google Drive sign-in flow."
+  },
+  "syncConnectedLabel": {
+    "message": "已連線",
+    "description": "Fallback label when the account email is unavailable."
+  },
+  "syncLastSyncLabel": {
+    "message": "上次同步：$TIME$",
+    "description": "Shows the time of the last successful sync.",
+    "placeholders": {
+      "TIME": {
+        "content": "$1"
+      }
+    }
+  },
+  "syncStatsLine": {
+    "message": "$PAGES$ 個頁面 · $COUNT$ 條標註",
+    "description": "Pages and annotations stored in Drive.",
+    "placeholders": {
+      "PAGES": {
+        "content": "$1"
+      },
+      "COUNT": {
+        "content": "$2"
+      }
+    }
+  },
+  "syncPendingLine": {
+    "message": "$COUNT$ 項更改待上傳",
+    "description": "Number of queued changes not yet uploaded.",
+    "placeholders": {
+      "COUNT": {
+        "content": "$1"
+      }
+    }
+  },
+  "syncDisconnectButton": {
+    "message": "斷開連線",
+    "description": "Button to disconnect Google Drive."
+  },
+  "syncDisconnectTitle": {
+    "message": "斷開 Google 雲端硬碟？",
+    "description": "Title of the disconnect confirmation dialog."
+  },
+  "syncDisconnectWarning": {
+    "message": "系統將在此裝置上儲存一份您雲端硬碟標註的副本。在您重新連線之前，標註不會在裝置間同步：新的標註和更改將僅保留在這臺電腦上。您的資料在 Google 雲端硬碟中保持完好。",
+    "description": "Warning shown before disconnecting Google Drive."
+  },
+  "syncDisconnectPendingTitle": {
+    "message": "有未同步的更改",
+    "description": "Title of the unsynced-changes confirmation dialog."
+  },
+  "syncDisconnectPendingWarning": {
+    "message": "有 $COUNT$ 項更改尚未上傳到雲端硬碟。它們將保留在此裝置的本地副本中（重新連線後會上傳），但目前還不在您的 Google 雲端硬碟中。要繼續嗎？",
+    "description": "Warning when disconnecting with changes not yet uploaded.",
+    "placeholders": {
+      "COUNT": {
+        "content": "$1"
+      }
+    }
+  },
+  "syncDisconnectDoneTitle": {
+    "message": "已斷開 Google 雲端硬碟",
+    "description": "Title of the dialog confirming the disconnection."
+  },
+  "syncDisconnectDoneText": {
+    "message": "已建立本地副本：$COUNT$ 條標註，來自 $PAGES$ 個頁面。",
+    "description": "Result of the local copy created on sign-out.",
+    "placeholders": {
+      "COUNT": {
+        "content": "$1"
+      },
+      "PAGES": {
+        "content": "$2"
+      }
+    }
+  },
+  "syncCopyFromCacheNote": {
+    "message": "無網路連線：副本基於此裝置的快取資料建立，可能不包含其他裝置的最新更改。",
+    "description": "Note when the local copy was built offline from cached data."
+  },
+  "syncQuotaErrorTitle": {
+    "message": "本地空間不足",
+    "description": "Title when the local copy does not fit in local storage."
+  },
+  "syncQuotaErrorText": {
+    "message": "本地副本無法放入此裝置的儲存空間，因此未退出登入。您的資料在 Google 雲端硬碟中保持完好。",
+    "description": "Explains the sign-out was aborted because the copy does not fit."
+  },
+  "syncNeedsReauthText": {
+    "message": "Google 雲端硬碟的造訪許可權已過期或被撤銷。請重新連線以恢復同步。",
+    "description": "Shown when Drive access expired or was revoked."
+  },
+  "syncReconnectButton": {
+    "message": "重新連線",
+    "description": "Button to re-run the sign-in flow after a revocation."
+  },
+  "syncPromoTitle": {
+    "message": "使用 Google 雲端硬碟同步您的標註",
+    "description": "Title of the one-time promo modal."
+  },
+  "syncModalConnect": {
+    "message": "連線",
+    "description": "Primary button of the promo modal."
+  },
+  "syncModalNotNow": {
+    "message": "暫不",
+    "description": "Secondary button of the promo modal."
+  },
+  "syncModalContinue": {
+    "message": "繼續",
+    "description": "Primary button to proceed despite a warning."
+  },
+  "syncConnecting": {
+    "message": "正在連線…",
+    "description": "Button label while the sign-in flow is running."
+  },
+  "syncConnectedToast": {
+    "message": "已連線 Google 雲端硬碟",
+    "description": "Toast after a successful connection."
+  },
+  "syncConnectFailedToast": {
+    "message": "無法連線 Google 雲端硬碟",
+    "description": "Toast when the sign-in flow fails or is cancelled."
+  },
+  "syncGenericErrorToast": {
+    "message": "Google 雲端硬碟操作失敗",
+    "description": "Toast for an unexpected Drive error."
+  },
+  "openAnnotationsPanel": {
+    "message": "檢視我的全部標註",
+    "description": "Sidebar button and toolbar-icon context menu entry that opens the global annotations panel."
+  },
+  "panelPageTitle": {
+    "message": "全部標註 · 大慈恩",
+    "description": "Browser tab title of the annotations panel."
+  },
+  "panelTitle": {
+    "message": "全部標註",
+    "description": "Heading of the annotations panel."
+  },
+  "panelBackendTooltip": {
+    "message": "標註的儲存位置",
+    "description": "Tooltip of the badge that shows where annotations are stored."
+  },
+  "panelBackendSync": {
+    "message": "Chrome 同步",
+    "description": "Badge: annotations stored in chrome.storage.sync."
+  },
+  "panelBackendDrive": {
+    "message": "Google Drive",
+    "description": "Badge: annotations stored in Google Drive."
+  },
+  "panelRefresh": {
+    "message": "重新整理",
+    "description": "Button that reloads all annotations."
+  },
+  "panelExport": {
+    "message": "匯出",
+    "description": "Button that opens the export menu."
+  },
+  "panelExportHint": {
+    "message": "匯出目前顯示的標註。",
+    "description": "Hint inside the export menu."
+  },
+  "panelExportMarkdown": {
+    "message": "Markdown (.md)",
+    "description": "Export menu item: Markdown file."
+  },
+  "panelExportJson": {
+    "message": "JSON (.json)",
+    "description": "Export menu item: JSON file."
+  },
+  "panelDarkMode": {
+    "message": "深色模式",
+    "description": "Tooltip of the dark mode toggle."
+  },
+  "panelCacheBanner": {
+    "message": "無法連線 Google Drive。正在顯示本地副本，可能不包含其他裝置上的最新更改。",
+    "description": "Banner shown when Drive is unreachable and the local cache is displayed."
+  },
+  "panelSearchPlaceholder": {
+    "message": "搜尋引文、筆記與頁面",
+    "description": "Placeholder of the search box."
+  },
+  "panelFilterColors": {
+    "message": "顏色",
+    "description": "Filter section title: colors."
+  },
+  "panelFilterType": {
+    "message": "類型",
+    "description": "Filter section title: annotation type."
+  },
+  "panelTypeAll": {
+    "message": "全部",
+    "description": "Type filter: all annotations."
+  },
+  "panelTypeHighlight": {
+    "message": "螢光筆",
+    "description": "Type filter: highlights."
+  },
+  "panelTypeUnderline": {
+    "message": "底線",
+    "description": "Type filter: underlines."
+  },
+  "panelTypeNote": {
+    "message": "頁面筆記",
+    "description": "Type filter: page notes."
+  },
+  "panelFilterDate": {
+    "message": "日期",
+    "description": "Filter section title: date."
+  },
+  "panelDateAll": {
+    "message": "不限時間",
+    "description": "Date filter: any time."
+  },
+  "panelDateToday": {
+    "message": "今天",
+    "description": "Date filter: today."
+  },
+  "panelDateWeek": {
+    "message": "最近 7 天",
+    "description": "Date filter: last 7 days."
+  },
+  "panelDateMonth": {
+    "message": "最近 30 天",
+    "description": "Date filter: last 30 days."
+  },
+  "panelDateYear": {
+    "message": "今年",
+    "description": "Date filter: this year."
+  },
+  "panelOnlyWithComment": {
+    "message": "僅顯示有筆記的",
+    "description": "Checkbox: show only annotations that have a comment."
+  },
+  "panelFilterSites": {
+    "message": "網站",
+    "description": "Filter section title: sites (domains)."
+  },
+  "panelClearFilters": {
+    "message": "清除篩選",
+    "description": "Button that resets all filters."
+  },
+  "panelSortLabel": {
+    "message": "排序",
+    "description": "Label of the sort selector."
+  },
+  "panelSortNewest": {
+    "message": "最新優先",
+    "description": "Sort option: newest first."
+  },
+  "panelSortOldest": {
+    "message": "最早優先",
+    "description": "Sort option: oldest first."
+  },
+  "panelSortPage": {
+    "message": "頁面 A–Z",
+    "description": "Sort option: page title A to Z."
+  },
+  "panelSortMostAnnotated": {
+    "message": "標註最多",
+    "description": "Sort option: pages with most annotations first."
+  },
+  "panelCollapseAll": {
+    "message": "全部收合",
+    "description": "Button that collapses every page group."
+  },
+  "panelExpandAll": {
+    "message": "全部展開",
+    "description": "Button that expands every page group."
+  },
+  "panelLoading": {
+    "message": "正在載入您的標註…",
+    "description": "Loading state text."
+  },
+  "panelLoadFailed": {
+    "message": "無法載入您的標註，請再試一次。",
+    "description": "Toast when annotations could not be loaded."
+  },
+  "panelEmptyTitle": {
+    "message": "還沒有標註",
+    "description": "Empty state title (no annotations at all)."
+  },
+  "panelEmptyText": {
+    "message": "在網頁上標註文字後，就會出現在這裡。",
+    "description": "Empty state text (no annotations at all)."
+  },
+  "panelNoResultsTitle": {
+    "message": "沒有符合的結果",
+    "description": "Title when filters match nothing."
+  },
+  "panelNoResultsText": {
+    "message": "換個關鍵字，或清除篩選條件。",
+    "description": "Text when filters match nothing."
+  },
+  "panelResultCount": {
+    "message": "顯示 $1 / $2 則標註",
+    "description": "Result counter. $1 = shown, $2 = total."
+  },
+  "panelStats": {
+    "message": "$1 則標註 · $2 個頁面 · $3 個網站",
+    "description": "Totals line. $1 = annotations, $2 = pages, $3 = sites."
+  },
+  "panelStorageUsage": {
+    "message": "Chrome 同步儲存：已使用 $1%",
+    "description": "Chrome sync storage usage. $1 = percentage."
+  },
+  "panelUntitledPage": {
+    "message": "無標題頁面",
+    "description": "Fallback title for pages without a stored title."
+  },
+  "panelOpenPage": {
+    "message": "開啟頁面",
+    "description": "Tooltip: open the annotated page."
+  },
+  "panelGoToHighlight": {
+    "message": "前往頁面中的標註處",
+    "description": "Tooltip: open the page scrolled to the highlight."
+  },
+  "panelAddPageNote": {
+    "message": "新增頁面筆記",
+    "description": "Tooltip: add a page note (annotation without anchor)."
+  },
+  "panelPageNoteLabel": {
+    "message": "頁面筆記",
+    "description": "Label shown on page notes (panel and sidebar)."
+  },
+  "panelCopyMarkdown": {
+    "message": "複製為 Markdown",
+    "description": "Tooltip: copy the page annotations as Markdown."
+  },
+  "panelCopied": {
+    "message": "已複製到剪貼簿",
+    "description": "Toast after copying to the clipboard."
+  },
+  "panelDeletePage": {
+    "message": "刪除此頁面的全部標註",
+    "description": "Tooltip: delete every annotation of the page."
+  },
+  "panelConfirmDelete": {
+    "message": "確認？",
+    "description": "Label of a delete button waiting for a second click."
+  },
+  "panelEditComment": {
+    "message": "編輯筆記",
+    "description": "Tooltip: edit the comment."
+  },
+  "panelSave": {
+    "message": "儲存",
+    "description": "Save button of the comment editor."
+  },
+  "panelCancel": {
+    "message": "取消",
+    "description": "Cancel button of the comment editor."
+  },
+  "panelChangeColor": {
+    "message": "更改顏色",
+    "description": "Tooltip: change the annotation color."
+  },
+  "panelSetHighlight": {
+    "message": "改為螢光筆",
+    "description": "Tooltip: switch the annotation to a highlight."
+  },
+  "panelSetUnderline": {
+    "message": "改為底線",
+    "description": "Tooltip: switch the annotation to an underline."
+  },
+  "panelSaved": {
+    "message": "已儲存",
+    "description": "Toast after saving."
+  },
+  "panelNoteCreated": {
+    "message": "已建立頁面筆記",
+    "description": "Toast after creating a page note."
+  },
+  "panelSaveFailed": {
+    "message": "發生問題，請再試一次。",
+    "description": "Toast when an operation fails."
+  },
+  "panelDeleted": {
+    "message": "標註已刪除",
+    "description": "Toast after deleting one annotation."
+  },
+  "panelPageDeleted": {
+    "message": "已刪除 $1 則標註",
+    "description": "Toast after deleting a page. $1 = number of annotations."
+  },
+  "panelEditedOn": {
+    "message": "編輯於 $1",
+    "description": "Suffix with the last edit date. $1 = date."
+  },
+  "panelLinkPrompt": {
+    "message": "連結網址",
+    "description": "Prompt text when inserting a link in the comment editor."
+  },
+  "panelToolbarBulletList": {
+    "message": "項目符號清單",
+    "description": "Toolbar tooltip: bullet list."
+  },
+  "panelToolbarOrderedList": {
+    "message": "編號清單",
+    "description": "Toolbar tooltip: numbered list."
+  },
+  "panelExportTitle": {
+    "message": "大慈恩標註筆記",
+    "description": "Title of the exported Markdown document."
+  },
+  "panelExportedOn": {
+    "message": "匯出於 $1",
+    "description": "Export date line. $1 = date."
+  },
+  "panelColorYellow": {
+    "message": "黃色",
+    "description": "Color name."
+  },
+  "panelColorRed": {
+    "message": "紅色",
+    "description": "Color name."
+  },
+  "panelColorGreen": {
+    "message": "綠色",
+    "description": "Color name."
+  },
+  "panelColorBlue": {
+    "message": "藍色",
+    "description": "Color name."
+  },
+  "panelColorPurple": {
+    "message": "紫色",
+    "description": "Color name."
+  },
+  "panelColorPink": {
+    "message": "粉紅色",
+    "description": "Color name."
+  },
+  "panelColorOrange": {
+    "message": "橘色",
+    "description": "Color name."
+  },
+  "panelColorGrey": {
+    "message": "灰色",
+    "description": "Color name."
+  },
+  "privacyLink": {
+    "message": "隱私政策",
+    "description": "Header link of the welcome page that opens the privacy policy."
+  },
+  "disclosureTitleNew": {
+    "message": "量子螢光筆 PRO 如何處理您的資料",
+    "description": "Title of the data-practices notice shown the first time (welcome page, in-page notice, sidebar, panel)."
+  },
+  "disclosureTitleUpdate": {
+    "message": "本次更新改變了您的資料處理方式",
+    "description": "Title of the data-practices notice after an update that changed the practices."
+  },
+  "disclosureIntroNew": {
+    "message": "在您第一次標註之前，簡單說明：",
+    "description": "Intro line of the first-time notice."
+  },
+  "disclosureIntroUpdate": {
+    "message": "$1 版本改變了擴充套件儲存的內容或位置。簡而言之：",
+    "description": "Intro line of the update notice. $1 = practices version."
+  },
+  "disclosureChangesHeading": {
+    "message": "有什麼變化",
+    "description": "Heading of the list of changes in the update notice."
+  },
+  "disclosurePracticesHeading": {
+    "message": "擴充套件儲存什麼，存在哪裡",
+    "description": "Heading of the list describing what is stored and where."
+  },
+  "disclosureItemStores": {
+    "message": "您標註的文字、前後幾個詞、頁面的地址和標題，以及您寫的筆記。",
+    "description": "Data-practices item: what the extension stores."
+  },
+  "disclosureItemWhere": {
+    "message": "所有內容都留在您的瀏覽器中，Chrome 可能會將其與您的 Google 帳號同步。Google Drive 同步是可選的，只有您自己連線後才會開始。",
+    "description": "Data-practices item: where the data lives and that Drive sync is opt-in."
+  },
+  "disclosureItemNever": {
+    "message": "不會向開發者傳送任何內容。沒有分析、沒有廣告，您的資料絕不會被出售或共享。",
+    "description": "Data-practices item: nothing goes to the developer, no analytics or ads."
+  },
+  "disclosureItemControl": {
+    "message": "您可以隨時在側邊欄和“全部標註”面板中編輯、匯出或刪除所有內容。",
+    "description": "Data-practices item: the user can edit, export or delete everything."
+  },
+  "disclosureChangeTitle": {
+    "message": "新標註還會儲存頁面標題，以便“全部標註”面板為每個頁面加上名稱。",
+    "description": "Change in 2026.0905.2: page title stored with new annotations."
+  },
+  "disclosureChangeFavicon": {
+    "message": "面板從 Chrome 本地圖示快取顯示各網站的圖示；為此不會聯絡任何網站。",
+    "description": "Change in 2026.0905.2: favicons from Chrome's local cache in the panel."
+  },
+  "disclosureLink": {
+    "message": "閱讀完整的隱私政策",
+    "description": "Link to the full privacy policy."
+  },
+  "disclosureAccept": {
+    "message": "知道了",
+    "description": "Button that records the user's acknowledgement of the data practices."
+  },
+  "disclosureWelcomeAccepted": {
+    "message": "謝謝！除非我們的資料處理方式發生變化，否則不會再次詢問。",
+    "description": "Confirmation shown on the welcome page after accepting."
+  },
+  "panelPrivacyNoteSync": {
+    "message": "您的標註儲存在您的瀏覽器中，並由 Chrome 與您的 Google 帳號同步。不會向開發者傳送任何內容。",
+    "description": "Permanent privacy note in the panel when annotations live in Chrome sync."
+  },
+  "panelPrivacyNoteDrive": {
+    "message": "您的標註儲存在您自己 Google Drive 的隱藏資料夾中，只有此擴充套件可以造訪。不會向開發者傳送任何內容。",
+    "description": "Permanent privacy note in the panel when annotations live in Google Drive."
+  },
+  "showAnnotationsLabel": {
+    "message": "顯示標註"
+  },
+  "toggleAnnotationsTooltip": {
+    "message": "顯示／隱藏標註"
+  },
+  "annotationsShown": {
+    "message": "已顯示標註"
+  },
+  "annotationsHidden": {
+    "message": "已隱藏標註"
+  },
+  "showBallLabel": {
+    "message": "顯示懸浮球"
+  },
+  "hideBallLabel": {
+    "message": "隱藏懸浮球"
+  },
+  "toggleBallLabel": {
+    "message": "顯示／隱藏懸浮球"
+  },
+  "ballHiddenToast": {
+    "message": "懸浮球已隱藏。按 Alt+Shift+B、在側邊欄設定，或在工具列圖示上按右鍵，都可以再打開。"
+  },
+  "ballShownToast": {
+    "message": "已顯示懸浮球"
+  },
+  "annotationsHiddenHint": {
+    "message": "標註目前是隱藏的，請先點右側邊緣的眼睛圖示打開顯示。"
+  }
+}

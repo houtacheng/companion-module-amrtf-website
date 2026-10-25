@@ -1,0 +1,1352 @@
+:root,
+:host {
+    --highlighter-z-index: 10001;
+    --highlighter-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+    --highlighter-radius: 8px;
+    --highlighter-transition: all 0.15s ease-in-out;
+    --highlighter-primary: #ec8521;
+    --highlighter-color-yellow: #ffeb68ce;
+    --highlighter-color-red: #ff9a9aa8;
+    --highlighter-color-green: #a8e6a8ad;
+    --highlighter-color-blue: #a8d1e6cb;
+    --highlighter-color-purple: #d1a8e69c;
+    --highlighter-color-pink: #e6a8d19c;
+    --highlighter-color-orange: #F9C9A1e5;
+    --highlighter-color-grey: #D8D8D8e5;
+
+    /* --highlighter-color-yellow-solid: #fded87;
+    --highlighter-color-red-solid: #ff9a9a;
+    --highlighter-color-green-solid: #a8e6a8;
+    --highlighter-color-blue-solid: #a8d1e6;
+    --highlighter-color-purple-solid: #d1a8e6;
+    --highlighter-color-pink-solid: #e6a8d1;
+    --highlighter-color-orange-solid: #F9C9A1;
+    --highlighter-color-grey-solid: #D8D8D8; */
+    
+    --highlighter-color-yellow-solid: #ffd400;
+    --highlighter-color-red-solid: #ff6666;
+    --highlighter-color-green-solid: #5fb236;
+    --highlighter-color-blue-solid: #2ea8e5;
+    --highlighter-color-purple-solid: #a28ae5;
+    --highlighter-color-pink-solid: #e56eee;
+    --highlighter-color-orange-solid: #f19837;
+    --highlighter-color-grey-solid: #aaaaaa;
+
+    --highlighter-background: #f8fafc;
+    --highlighter-surface: #ffffff;
+    --highlighter-primary-light: #eff6ff;
+    --highlighter-text-primary: #334155;
+    --highlighter-text-secondary: #64748b;
+    --highlighter-border: #e2e8f0;
+    --highlighter-toolbar-bg: #f1f5f9;
+}
+
+.highlighter-context-menu {
+    position: absolute;
+    background: white;
+    /* border: 1px solid #ccc; */
+    flex-direction: column;
+    gap: 4px;
+    border-radius: var(--highlighter-radius);
+    box-shadow: var(--highlighter-shadow);
+    padding: 5px;
+    z-index: 10002;
+    display: none;
+    font-family: "Rubik", -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    transform-origin: top center;
+}
+
+.highlighter-context-menu button {
+    display: block;
+    width: 100%;
+    padding: 8px 12px;
+    border: none;
+    background: none;
+    text-align: left;
+    cursor: pointer;
+    font-size: 13px;
+    /* font-weight: 400; */
+    color: #555;
+    border-radius: 6px;
+    text-align: center;
+}
+
+.highlighter-context-menu button:hover {
+    background-color: #f0f0f0;
+}
+
+@keyframes popup-bounce-in {
+    0% {
+        transform: scale(0);
+        opacity: 0;
+    }
+    
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes popup-bounce-out {
+    0% {
+        transform: scale(1);
+        opacity: 1;
+    }
+
+    100% {
+        transform: scale(0);
+        opacity: 0;
+    }
+}
+
+.highlighter-close-btn {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 6px;
+    font-weight: 900;
+    line-height: 10px;
+    color: #555;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    z-index: 10001;
+    transition: all 0.15s ease-in-out;
+    padding: 0;
+    margin: 0;
+    border: none;
+    margin-top: 3px;
+    opacity: 0; transform: scale(0); pointer-events: none; transition: background-color 0.2s, color 0.2s;
+}
+
+.highlighter-close-btn.show {
+    pointer-events: auto;
+    animation: popup-bounce-in 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55) forwards;
+}
+
+.highlighter-menu.closing .highlighter-close-btn,
+.highlighter-menu.closing .highlighter-close-btn.show {
+    pointer-events: auto;
+    animation: popup-bounce-out 150ms ease-in forwards;
+}
+
+.highlighter-close-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+}
+
+.highlighter-menu { position: absolute; display: none; flex-direction: column; gap: 6px; background: white; border-radius: var(--highlighter-radius); box-shadow: var(--highlighter-shadow); z-index: var(--highlighter-z-index); font-family: 'Rubik', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 6px; transition: opacity 0.1s ease-in-out; width: auto; transform-origin: top center; }
+.highlighter-menu, .highlighter-menu * { box-sizing: border-box; }
+.highlighter-menu.show { display: flex; }
+#highlighter-arrow { position: absolute; background: white; width: 8px; height: 8px; transform: rotate(45deg); }
+.highlighter-menu .menu-row { display: flex; gap: 5px; justify-content: center; align-items: center; }
+.highlighter-menu .menu-row.types { background-color: #f0f0f0; padding: 3px; border-radius: 6px; }
+/* Línea que comparte el grupo de tipos (izquierda, ocupa el espacio restante)
+   y el contenedor del botón de copiar (derecha), separados por un hueco. */
+.highlighter-menu .menu-row.types-line { gap: 6px; }
+.highlighter-menu .menu-row.types-line .menu-row.types { flex: 1; }
+.highlighter-menu .menu-copy-group {
+    background-color: #f0f0f0;
+    padding: 3px;
+    border-radius: 6px;
+    flex: 0 0 31px; /* cuadrado: 25px de botón + 3px de padding por lado */
+    width: 31px;
+    height: 31px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.highlighter-menu button { background: none; border: none; border-radius: 5px; cursor: pointer; transition: var(--highlighter-transition); display: flex; align-items: center; justify-content: center; }
+.highlighter-color-selector {
+    width: 22px;
+    height: 22px;
+    border: 1px solid rgba(0,0,0,0.1);
+    padding: 2.5px;
+    flex-shrink: 0;
+    transition: all 0.15s ease-in-out;
+}
+.highlighter-color-selector div {
+    transition: all 0.15s ease-in-out;
+    box-shadow: 0 0 0 0px color-mix(in srgb, black 15%, transparent);
+}
+.highlighter-color-selector.active div {
+    /* box-shadow: 0 0 0 3px color-mix(in srgb, var(--highlighter-primary) 50%, transparent); */
+    box-shadow: 0 0 0 3px color-mix(in srgb, black 15%, transparent);
+}
+
+.highlighter-menu .menu-row.colors {
+    width: 100%;
+}
+
+.highlighter-menu .menu-row.colors button {
+    width: 22px;
+    height: 22px;
+}
+
+.highlighter-menu .menu-row.actions {
+    padding: 3px;
+    background-color: #f0f0f0;
+    border-radius: 6px;
+
+    margin-top: 2px;
+ }
+
+.highlighter-type-selector {
+    flex: 1;
+    height: 25px;
+    font-size: 16px;
+    /* font-weight: 500; */
+    color: #555;
+    background-color: transparent;
+}
+
+.highlighter-type-selector.active {
+    background-color: white;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.highlighter-type-selector .underline {
+    text-decoration: underline;
+    text-decoration-thickness: 1.5px;
+}
+
+/* Botón de copiar, dentro de su propio contenedor gris (.menu-copy-group). */
+.highlighter-copy-btn {
+    width: 25px;
+    height: 25px;
+    color: #555; /* mismo color que las letras de resaltado/subrayado */
+    background-color: transparent;
+}
+
+.highlighter-copy-btn .copy-icon {
+    width: 12px;
+    height: 15px;
+    flex-shrink: 0;
+}
+
+.highlighter-copy-btn .copy-icon path {
+    fill: currentColor;
+}
+
+.highlighter-copy-btn:hover {
+    background-color: white;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.highlighter-menu .menu-row.actions button.highlighter-delete-btn {
+    flex: 1;
+    height: 25px;
+    color: #555;
+    display: flex; /* Make it a flex container */
+    align-items: center; /* Vertically center content */
+    justify-content: center; /* Horizontally center content */
+    gap: 4px; /* Space between icon and text */
+    /* padding: 0 8px; */
+    top: 1rem;
+
+    font-size: 13px;
+    /* margin-bottom: 3px; */
+    background-color: #fff;
+
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.highlighter-menu .menu-row.actions .highlighter-delete-btn .delete-icon {
+    display: inline-block;
+    width: 14px; /* Adjust size as needed */
+    height: 14px; /* Adjust size as needed */
+    fill: currentColor; /* Inherit color from parent */
+    flex-shrink: 0; /* Prevent icon from shrinking */
+    transform: translateY(-1px); /* Push icon up by 2px */
+}
+
+.highlighter-menu .menu-row.actions .highlighter-delete-btn .delete-icon path {
+    fill: currentColor;
+}
+
+.highlighter-menu .menu-row.actions .highlighter-delete-btn span {
+    /* No specific styles needed here unless we want to override something */
+}
+
+.highlighter-menu .menu-row.actions .highlighter-delete-btn:hover {
+    background-color: #FFE0E0;
+    color: #D8000C; /* This will now apply to the SVG via currentColor */
+}
+
+.highlighter-menu .highlighter-shortcut-warning { font-size: 11px; color: #888; text-align: center; padding: 4px 0 0 0; border-top: 1px solid #f0f0f0; margin-top: 4px; }
+
+/* Aviso discreto (p. ej. "Texto copiado al portapapeles"): misma identidad
+   que el menú — blanco, Rubik, radio y sombra suaves. */
+.highlighter-toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translate(-50%, 8px);
+    background: white;
+    color: #555;
+    font-family: 'Rubik', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 13px;
+    line-height: 1;
+    padding: 9px 14px;
+    border-radius: var(--highlighter-radius);
+    box-shadow: var(--highlighter-shadow);
+    z-index: var(--highlighter-z-index);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.highlighter-toast.show {
+    opacity: 1;
+    transform: translate(-50%, 0);
+}
+
+#highlighter-sidebar-instance {
+    position: fixed;
+    top: 0;
+    right: 0;
+    height: 100%;
+    border: none;
+    z-index: 9999999;
+    transition: transform 0.3s ease-in-out, width 0.3s ease-in-out;
+    transform: translateX(100%);
+}
+
+#highlighter-resize-cover {
+    position: fixed; 
+    top: 0; 
+    left: 0; 
+    width: 100vw; 
+    height: 100vh;
+    background: transparent; 
+    cursor: col-resize; 
+    z-index: 10000000;
+}
+
+#highlighter-resize-guide {
+    position: fixed; 
+    top: 0; 
+    height: 100vh; 
+    width: 2px;
+    background-image: linear-gradient(to bottom, #444 4px, transparent 4px);
+    background-size: 100% 8px;
+    z-index: 10000001;
+    pointer-events: none;
+}
+
+
+/* Tiptap editor styles for the highlighter menu */
+.highlighter-comment-box {
+    display: none;
+    max-width: 212px;
+    margin-top: 1.5px;
+}
+
+.highlighter-menu.show .highlighter-comment-box {
+    display: block;
+}
+
+.highlighter-comment-box-wrapper {
+    background-color: #f0f0f0;
+    border-radius: 6px;
+    padding: 3px 3px 0 3px;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Estilos de TIPTAP */
+
+/* Reset de estilos en el ProseMirror */
+.tiptap-editor,
+.tiptap-editor * {
+    all: revert;
+}
+
+.ProseMirror {
+  position: relative;
+}
+
+.tiptap.ProseMirror {
+  word-wrap: break-word;
+  white-space: pre-wrap;
+  white-space: break-spaces;
+  -webkit-font-variant-ligatures: none;
+  font-variant-ligatures: none;
+  font-feature-settings: "liga" 0; /* the above doesn't seem to work in Edge */
+  margin-bottom: 3px;
+}
+
+.ProseMirror [contenteditable="false"] {
+  white-space: normal;
+}
+
+.ProseMirror [contenteditable="false"] [contenteditable="true"] {
+  white-space: pre-wrap;
+}
+
+.ProseMirror pre {
+  white-space: pre-wrap;
+}
+
+img.ProseMirror-separator {
+  display: inline !important;
+  border: none !important;
+  margin: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+.ProseMirror-gapcursor {
+  display: none;
+  pointer-events: none;
+  position: absolute;
+  margin: 0;
+}
+
+.ProseMirror-gapcursor:after {
+  content: "";
+  display: block;
+  position: absolute;
+  top: -2px;
+  width: 20px;
+  border-top: 1px solid black;
+  animation: ProseMirror-cursor-blink 1.1s steps(2, start) infinite;
+}
+
+@keyframes ProseMirror-cursor-blink {
+  to {
+    visibility: hidden;
+  }
+}
+
+.ProseMirror-hideselection *::selection {
+  background: transparent;
+}
+
+.ProseMirror-hideselection *::-moz-selection {
+  background: transparent;
+}
+
+.ProseMirror-hideselection * {
+  caret-color: transparent;
+}
+
+.ProseMirror-focused .ProseMirror-gapcursor {
+  display: block;
+}
+
+/* ----------------- */
+
+/* New rule to move toolbar to the top */
+.highlighter-comment-box-wrapper.toolbar-on-top {
+    flex-direction: column-reverse;
+}
+
+.tiptap-editor .ProseMirror {
+    box-sizing: border-box;
+    
+    width: 100%;
+    min-height: 57px;
+    max-height: 240px; /* Set max height for the editor area */
+    
+    padding: 6px;
+    
+    border-radius: 5px;
+    font-size: 14px;
+    color: #334155;
+    background-color: white;
+    
+    overflow-y: auto; /* Apply scroll only to the editor */
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+/* --- Compact & Styled Scrollbar for the Editor --- */
+.tiptap-editor .ProseMirror::-webkit-scrollbar {
+    width: 8px;
+}
+
+.tiptap-editor .ProseMirror::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.tiptap-editor .ProseMirror::-webkit-scrollbar-thumb {
+    background-color: #ccc;
+    border-radius: 10px;
+    border: 2px solid white; /* Padding effect relative to the editor's background */
+}
+
+.tiptap-editor .ProseMirror::-webkit-scrollbar-thumb:hover {
+    background-color: #999;
+}
+
+.tiptap-toolbar {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 3px;
+    border-radius: 0.5rem;
+    flex-shrink: 0;
+
+    /* --- Animation & Visibility (Corrected) --- */
+    /* overflow: hidden; */
+    max-height: 0;
+    opacity: 0;
+    padding: 0;
+    /* padding-left: 4px;
+    padding-right: 4px; */
+    margin: 0;
+    transition: max-height 150ms ease-in-out, opacity 150ms ease-in-out, padding 150ms ease-in-out, margin-top 150ms ease-in-out;
+    z-index: -1;
+}
+
+.tiptap-toolbar.is-visible {
+    max-height: 100px;
+    opacity: 1;
+    padding-top: 0;
+    margin: 0;
+    margin-bottom: 3px;
+    z-index: 1;
+}
+
+.toolbar-on-top .tiptap-toolbar.is-visible {
+    padding-top: 0;
+    padding-bottom: 4px;
+}
+
+.tiptap-toolbar button {
+    width: 35px;
+    height: 25px;
+    border-radius: 5px;
+    border: none;
+    background-color: transparent;
+    color: #64748b;
+    font-weight: 500;
+    font-size: 13px;
+    transition: all 0.2s;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.tiptap-toolbar button:hover {
+    background-color: rgba(0,0,0,0.05);
+}
+
+
+.tiptap-toolbar button.is-active {
+    background-color: #ffffff;
+    color: #334155;
+    font-weight: 700;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.tiptap-toolbar button[data-action="underline"] u {
+    /* text-decoration-color: var(--highlighter-primary); */
+    text-decoration-color: #64748b;
+}
+
+.tiptap-toolbar button[data-action="strike"] s {
+    /* text-decoration-color: var(--highlighter-primary); */
+    text-decoration-color: #64748b;
+    /* text-decoration-thickness: 1.5px; */
+}
+
+
+.tiptap-editor .ProseMirror .is-empty::before {
+    content: attr(data-placeholder);
+    float: left;
+    color: #adb5bd;
+    font-weight: 400;
+    pointer-events: none;
+    height: 0;
+}
+
+.tiptap-editor .ProseMirror h1.is-empty::before,
+.tiptap-editor .ProseMirror h2.is-empty::before,
+.tiptap-editor .ProseMirror h3.is-empty::before,
+.tiptap-editor .ProseMirror h4.is-empty::before,
+.tiptap-editor .ProseMirror h5.is-empty::before,
+.tiptap-editor .ProseMirror h6.is-empty::before {
+    content: attr(data-placeholder);
+    font-weight: 700;
+    float: left;
+    color: #d4d7da;
+    pointer-events: none;
+    height: 0;
+}
+
+.tiptap-editor .ProseMirror blockquote h1.is-empty::before,
+.tiptap-editor .ProseMirror blockquote h2.is-empty::before,
+.tiptap-editor .ProseMirror blockquote h3.is-empty::before,
+.tiptap-editor .ProseMirror blockquote h4.is-empty::before,
+.tiptap-editor .ProseMirror blockquote h5.is-empty::before,
+.tiptap-editor .ProseMirror blockquote h6.is-empty::before {
+    color: #bbbec0;
+}
+
+/* Prevents double placeholder on empty list items */
+.tiptap-editor .ProseMirror li.is-empty > p.is-empty::before {
+    content: none;
+}
+
+/* Hides placeholders on the root list and inner paragraph, showing only the list item's. */
+.tiptap-editor .ProseMirror > ul:first-child.is-empty::before,
+.tiptap-editor .ProseMirror > ol:first-child.is-empty::before,
+.tiptap-editor .ProseMirror > ul:first-child.is-empty > li.is-empty > p.is-empty::before,
+.tiptap-editor .ProseMirror > ol:first-child.is-empty > li.is-empty > p.is-empty::before {
+    content: none;
+}
+
+.tiptap-editor .ProseMirror:focus {
+    outline: none;
+    /* border-color: #3b82f6; */
+    /* border-color: var(--highlighter-primary); */
+}
+
+/* ==================================== */
+/* Estilos para elementos específicos del contenido */
+    
+.tiptap p {
+    margin: 0;
+    line-height: 1.6;
+}
+
+.tiptap h1, .tiptap h2, .tiptap h3, .tiptap h4, .tiptap h5, .tiptap h6 {
+    font-weight: 700;
+    line-height: 1.3;
+    color: var(--highlighter-text-primary);
+}
+
+/* .tiptap h1 { font-size: 1.45em; }
+.tiptap h2 { font-size: 1.25em; }
+.tiptap h3 { font-size: 1.15em; }
+.tiptap h4 { font-size: 1.05em; }
+.tiptap h5 { font-size: 1em; }
+.tiptap h6 { font-size: 0.9em; font-weight: 500;} */
+.tiptap h1 {
+    font-size: 1.35em;
+    margin: 0.4em 0 0.2em;
+}
+.tiptap h2 {
+    font-size: 1.25em;
+    margin: 0.3em 0 0.15em;
+}
+.tiptap h3 {
+    font-size: 1.15em;
+    margin: 0.25em 0 0.1em;
+}
+.tiptap h4 {
+    font-size: 1.05em;
+    margin: 0.2em 0 0.1em;
+}
+.tiptap h5 {
+    font-size: 1em;
+    margin: 0.15em 0 0.05em;
+}
+.tiptap h6 {
+    font-size: 0.9em;
+    margin: 0.1em 0 0;
+}
+
+.tiptap ul, .tiptap ol {
+    padding-left: 1.4rem;
+    margin: 0.3em 0 0.2em;
+}
+.tiptap ul li, .tiptap ol li {
+    position: relative;
+}
+.tiptap ul { list-style-type: disc; }
+.tiptap ol { list-style-type: decimal; }
+
+:host(.ctrl-is-pressed) .ProseMirror a {
+    cursor: pointer;
+}
+
+.tiptap a {
+    color: var(--highlighter-primary);
+    text-decoration: underline;
+    cursor: text;
+}
+
+body.ctrl-is-pressed .tiptap a {
+    cursor: pointer;
+}
+
+.tiptap blockquote {
+    position: relative;
+    border-left: 3px solid #d1d5db;
+    margin-top: 0.4rem;
+    margin-bottom: 0.4rem;
+    /* padding-left: 0.5rem; */
+    /* padding-top: 0.5rem; */
+    padding: 0.5rem;
+    padding-bottom: 0.5rem !important;
+    /* font-style: italic; */
+    color: var(--highlighter-text-secondary);
+    background-color: #00000010;
+    border-top-right-radius: 6px;
+    border-bottom-right-radius: 6px;
+    margin-inline: 0;
+}
+
+/* .tiptap blockquote blockquote {
+    margin-right: 0.5rem;
+} */
+
+.tiptap pre {
+    position: relative;
+    background: #1e293bc7;
+    color: #e2e8f0;
+    font-family: 'JetBrains Mono', 'Courier New', Courier, monospace;
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.tiptap pre code {
+    color: inherit;
+    padding: 0;
+    background: none;
+    font-size: 0.85em;
+    line-height: 1;
+    font-family: inherit;
+}
+
+.tiptap code:not(pre code) {
+    background-color: #dde0e4;
+    color: #475569;
+    padding: 0.125rem 0.275rem;
+    border-radius: 0.375rem;
+    font-size: 0.875em;
+    font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Consolas', monospace;
+    border: 1px solid #e2e8f0;
+    font-weight: 500;
+}
+
+.tiptap hr {
+    border: none;
+    border-top: 1px solid #d4d4d4;
+    margin: 0.75em 0;
+}
+
+/* --- Placeholder Overrides --- */
+.tiptap-editor .ProseMirror pre.is-empty::before {
+    font-size: 0.85em;
+    /* font-family: 'Rubik', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; */
+    font-family: 'JetBrains Mono', 'Courier New', Courier, monospace;
+    font-weight: 400;
+    position: relative;
+    top: 0.2em;
+}
+
+.tiptap-editor .ProseMirror li.is-empty::before {
+    position: relative;
+    top: 0.2em;
+}
+
+.tiptap-editor .ProseMirror blockquote.is-empty::before {
+    position: relative;
+    top: 0.18em;
+}
+
+.tiptap-editor .ProseMirror pre.is-empty::before {
+    position: relative;
+    top: 0.3em;
+}
+
+/* --- Link Editor Modal --- */
+.tiptap-link-tooltip {
+    position: absolute;
+    background-color: #6e6e6e;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 3px;
+    font-size: 10px;
+    font-family: 'Rubik', sans-serif;
+    z-index: 10005; /* Ensure it's above other elements */
+    pointer-events: none; /* It should not be interactive */
+}
+
+.tiptap-link-tooltip.popup-bounce-in {
+    animation: popup-bounce-in 150ms ease-out forwards;
+    display: block;
+}
+
+.tiptap-link-tooltip.popup-bounce-out {
+    animation: popup-bounce-out 300ms ease-in forwards;
+}
+
+.highlighter-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 20000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.2s ease-out;
+}
+
+.highlighter-link-modal {
+    background-color: var(--highlighter-background-color, #fdfdfd);
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    width: 100%;
+    max-width: 400px;
+    font-family: 'Rubik', sans-serif;
+    color: var(--highlighter-text-color, #2c2c2c);
+    animation: slideInUp 0.25s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideInUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.highlighter-link-modal h3 {
+    margin: 0 0 16px 0;
+    font-size: 18px;
+    color: var(--highlighter-primary, #eb8521);
+}
+
+.highlighter-link-modal .form-group {
+    margin-bottom: 16px;
+}
+
+.highlighter-link-modal label {
+    display: block;
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 6px;
+    color: var(--highlighter-text-color-secondary, #6a6a6a);
+}
+
+.highlighter-link-modal input[type="text"] {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid var(--highlighter-border-color, #e0e0e0);
+    background-color: #f5f5f5;
+    border-radius: 6px;
+    font-size: 14px;
+    box-sizing: border-box;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.highlighter-link-modal input[type="text"]:focus {
+    outline: none;
+    border-color: var(--highlighter-primary, #eb8521);
+    box-shadow: 0 0 0 3px rgba(235, 133, 33, 0.2);
+}
+
+.highlighter-link-modal .modal-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.highlighter-link-modal .modal-actions .left-actions button {
+    background: none;
+    border: none;
+    color: var(--highlighter-danger-color, #e53935);
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 8px 16px;
+    border-radius: 6px;
+    transition: background-color 0.2s;
+}
+
+.highlighter-link-modal .modal-actions .left-actions button:hover {
+    background-color: rgba(229, 57, 53, 0.1);
+}
+
+.highlighter-link-modal .modal-actions .right-actions {
+    display: flex;
+    gap: 12px;
+}
+
+.highlighter-link-modal .modal-actions button {
+    padding: 8px 16px;
+    font-size: 14px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.highlighter-link-modal .modal-actions .cancel-btn {
+    background-color: transparent;
+    border: 1px solid var(--highlighter-border-color, #e0e0e0);
+    color: var(--highlighter-text-color-secondary, #6a6a6a);
+}
+
+.highlighter-link-modal .modal-actions .cancel-btn:hover {
+    background-color: #f0f0f0;
+    border-color: #ccc;
+}
+
+.highlighter-link-modal .modal-actions .save-btn {
+    background-color: var(--highlighter-primary, #eb8521);
+    color: white;
+}
+
+.highlighter-link-modal .modal-actions .save-btn:hover {
+    background-color: #c86f1c;
+}
+
+/* --- Support Modal ("Buy me a coffee") --- */
+.highlighter-donation-modal {
+    background-color: #fdfdfd;
+    padding: 24px 32px;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+    width: 100%;
+    max-width: 600px;
+    font-family: 'Rubik', sans-serif;
+    color: #2c2c2c;
+    animation: slideInUp 0.3s ease-out;
+    border-top: 4px solid var(--highlighter-primary, #eb8521);
+    position: relative;
+}
+
+.highlighter-donation-modal h3 {
+    margin: 0 0 12px 0;
+    font-size: 20px;
+    font-weight: 700;
+    text-align: center;
+    color: var(--highlighter-primary, #eb8521);
+}
+
+.highlighter-donation-modal > p {
+    text-align: center;
+    margin-bottom: 24px;
+    font-size: 15px;
+    line-height: 1.6;
+    color: #555;
+}
+
+.highlighter-donation-modal .donations-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 420px);
+    justify-content: center;
+    gap: 20px;
+    margin-bottom: 24px;
+}
+
+.highlighter-donation-modal .donation-card {
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    text-align: center;
+    transition: box-shadow 0.2s, border-color 0.2s;
+}
+
+.highlighter-donation-modal .donation-card:hover {
+    border-color: #ccc;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.highlighter-donation-modal .donation-card h4 {
+    font-size: 16px;
+    font-weight: 500;
+    margin: 0 0 8px 0;
+    color: #333;
+}
+
+.highlighter-donation-modal .donation-card p {
+    font-size: 13px;
+    color: #666;
+    line-height: 1.5;
+    margin: 0 0 12px 0;
+    flex-grow: 1;
+}
+
+.highlighter-donation-modal .suggested-amounts {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.highlighter-donation-modal .amount-chip {
+    background-color: #f1f5f9;
+    border-radius: 14px;
+    padding: 2px 12px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #64748b;
+    white-space: nowrap;
+}
+
+.highlighter-donation-modal .donation-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 14px;
+    background-color: var(--highlighter-primary, #eb8521);
+    color: white;
+    transition: background-color 0.2s;
+}
+
+.highlighter-donation-modal .donation-button:hover {
+    background-color: var(--highlighter-primary-hover, #c86f1c);
+}
+
+.highlighter-donation-modal .donation-button svg {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+}
+
+.highlighter-donation-modal .donation-card .secure-payment-note {
+    flex-grow: 0;
+    margin: 10px 0 0 0;
+    font-size: 11px;
+    color: #999;
+}
+
+.highlighter-donation-modal .modal-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    border-top: 1px solid #e0e0e0;
+    padding-top: 20px;
+    margin-top: 24px;
+}
+
+.highlighter-donation-modal .modal-actions .right-actions {
+    display: flex;
+    gap: 12px;
+}
+
+.highlighter-donation-modal .modal-actions button {
+    padding: 8px 16px;
+    font-size: 14px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.highlighter-donation-modal .modal-actions .never-remind-btn {
+    background: none;
+    border: none;
+    color: var(--highlighter-danger-color, #e53935);
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 8px 16px;
+    border-radius: 6px;
+    transition: background-color 0.2s;
+}
+
+.highlighter-donation-modal .modal-actions .never-remind-btn:hover {
+    background-color: rgba(229, 57, 53, 0.1);
+}
+
+.highlighter-donation-modal .modal-actions .remind-later-btn {
+    background-color: var(--highlighter-primary, #eb8521);
+    color: white;
+}
+
+.highlighter-donation-modal .modal-actions .remind-later-btn:hover {
+    background-color: #c86f1c;
+}
+
+.highlighter-donation-modal .heading-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+    /* position: relative; */
+}
+
+.highlighter-donation-modal .heading-wrapper img {
+    width: 32px;
+    height: 32px;
+}
+
+.highlighter-donation-modal h3 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--highlighter-primary, #eb8521);
+}
+
+
+.highlighter-donation-modal .close-modal-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: none;
+    border: none; /* Asegura que no haya borde */
+    outline: none; /* Elimina el contorno al enfocar */
+    font-size: 20px; /* Tamaño de la X más sutil */
+    cursor: pointer;
+    color: #ccc; /* Gris claro */
+    padding: 0; /* Sin padding para un look más ajustado */
+    transition: background-color 0.2s ease, color 0.2s ease;
+    line-height: 1;
+    width: 24px; /* Tamaño más pequeño */
+    height: 24px; /* Tamaño más pequeño */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.highlighter-donation-modal .close-modal-btn:hover {
+    background-color: rgba(255, 165, 0, 0.3); /* Naranja primario un poco más visible */
+    color: orange; /* Naranja primario */
+}
+
+.highlighter-dynamic-tooltip {
+    position: absolute;
+    background-color: #333;
+    color: white;
+    padding: 5px 10px;
+    border-radius: 5px;
+    font-size: 12px;
+    font-family: 'Rubik', sans-serif;
+    z-index: 20001; /* Above the modal overlay */
+    pointer-events: none;
+    display: none; /* Initially hidden */
+    white-space: nowrap;
+}
+
+.highlighter-dynamic-tooltip.popup-bounce-in {
+    animation: popup-bounce-in 150ms ease-out forwards;
+    display: block;
+}
+
+
+.highlighter-dynamic-tooltip.popup-bounce-out {
+    animation: popup-bounce-out 150ms ease-in forwards;
+}
+
+/* --- Thank You Message --- */
+.highlighter-thank-you-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 20px;
+    animation: fadeIn 0.5s ease-out;
+}
+
+.highlighter-thank-you-content h3 {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--highlighter-primary, #eb8521);
+    margin: 0 0 10px 0;
+}
+
+.highlighter-thank-you-content p {
+    font-size: 15px;
+    color: #555;
+    line-height: 1.6;
+    margin: 0 0 24px 0;
+}
+
+.highlighter-thank-you-content .close-thank-you-btn {
+    background-color: var(--highlighter-primary, #eb8521);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 14px;
+    transition: background-color 0.2s;
+}
+
+.highlighter-thank-you-content .close-thank-you-btn:hover {
+    background-color: #c86f1c;
+}
+
+.thank-you-animation {
+    margin-bottom: 20px;
+}
+
+.checkmark {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    display: block;
+    stroke-width: 3;
+    stroke: #fff;
+    stroke-miterlimit: 10;
+    box-shadow: inset 0px 0px 0px #4caf50;
+    animation: fill .4s ease-in-out .4s forwards, scale .3s ease-in-out .9s both;
+}
+
+.checkmark-circle {
+    stroke-dasharray: 166;
+    stroke-dashoffset: 166;
+    stroke-width: 3;
+    stroke-miterlimit: 10;
+    stroke: #4caf50;
+    fill: none;
+    animation: stroke 0.6s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+}
+
+.checkmark-check {
+    transform-origin: 50% 50%;
+    stroke-dasharray: 48;
+    stroke-dashoffset: 48;
+    animation: stroke 0.3s cubic-bezier(0.65, 0, 0.45, 1) 0.8s forwards;
+}
+
+@keyframes stroke {
+    100% {
+        stroke-dashoffset: 0;
+    }
+}
+
+@keyframes scale {
+    0%, 100% {
+        transform: none;
+    }
+    50% {
+        transform: scale3d(1.1, 1.1, 1);
+    }
+}
+
+@keyframes fill {
+    100% {
+        box-shadow: inset 0px 0px 0px 40px #4caf50;
+    }
+}
+
+/* --- Aviso de prácticas de datos (divulgación destacada, política CWS 2026) --- */
+.highlighter-disclosure-modal {
+    background-color: #fdfdfd;
+    padding: 24px 32px;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+    width: 100%;
+    max-width: 520px;
+    max-height: 90vh;
+    overflow-y: auto;
+    font-family: 'Rubik', sans-serif;
+    color: #2c2c2c;
+    animation: slideInUp 0.3s ease-out;
+    border-top: 4px solid var(--highlighter-primary, #eb8521);
+    box-sizing: border-box;
+}
+
+.highlighter-disclosure-modal .heading-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.highlighter-disclosure-modal .heading-wrapper img {
+    width: 32px;
+    height: 32px;
+}
+
+.highlighter-disclosure-modal h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1.3;
+    color: var(--highlighter-primary, #eb8521);
+}
+
+.highlighter-disclosure-modal .disclosure-intro {
+    margin: 0 0 12px;
+    font-size: 14px;
+    line-height: 1.5;
+    color: #555;
+}
+
+.highlighter-disclosure-modal h4 {
+    margin: 12px 0 6px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #8a8a8a;
+}
+
+.highlighter-disclosure-modal ul {
+    margin: 0;
+    padding-left: 20px;
+    font-size: 13.5px;
+    line-height: 1.5;
+    color: #333;
+}
+
+.highlighter-disclosure-modal li {
+    margin-bottom: 6px;
+}
+
+.highlighter-disclosure-modal .modal-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-top: 18px;
+    padding-top: 14px;
+    border-top: 1px solid #e0e0e0;
+}
+
+.highlighter-disclosure-modal .policy-link {
+    color: var(--highlighter-primary, #eb8521);
+    font-size: 13px;
+    font-weight: 500;
+    text-decoration: none;
+}
+
+.highlighter-disclosure-modal .policy-link:hover {
+    text-decoration: underline;
+}
+
+.highlighter-disclosure-modal .accept-btn {
+    padding: 8px 18px;
+    border: none;
+    border-radius: 6px;
+    background-color: var(--highlighter-primary, #eb8521);
+    color: #fff;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.highlighter-disclosure-modal .accept-btn:hover {
+    background-color: #c86f1c;
+}

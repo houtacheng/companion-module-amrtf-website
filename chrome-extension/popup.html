@@ -165,10 +165,32 @@
 </head>
 <body>
   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-    <h3 style="margin: 0; font-size: 15px;">大慈恩 Companion 橋樑</h3>
-    <span id="versionTag" style="font-size: 11px; background: #e8eaed; color: #5f6368; padding: 2px 7px; border-radius: 10px; font-weight: 600;">v1.1.0</span>
+    <h3 style="margin: 0; font-size: 15px;">大慈恩官網整合外掛</h3>
+    <span id="versionTag" style="font-size: 11px; background: #e8eaed; color: #5f6368; padding: 2px 7px; border-radius: 10px; font-weight: 600;">v1.2.0</span>
   </div>
 
+  <style>
+    .qhp-card { background: white; border: 1px solid #e0e0e0; border-radius: 6px; padding: 10px 10px 8px; margin-bottom: 14px; }
+    .qhp-title { font-weight: bold; font-size: 13px; color: #202124; margin-bottom: 6px; }
+    .qhp-row { display: flex; justify-content: space-between; align-items: center; margin: 0; padding: 5px 0; font-size: 13px; color: #333; cursor: pointer; }
+    .qhp-row input { width: 16px; height: 16px; margin: 0; cursor: pointer; accent-color: #b5985a; }
+    .qhp-buttons { display: flex; gap: 6px; margin: 6px 0 4px; }
+    .qhp-buttons button { flex: 1; padding: 7px 4px; font-size: 12px; font-weight: 600; border: 1px solid #b5985a; border-radius: 4px; background: #fbf7ef; color: #6b5434; cursor: pointer; }
+    .qhp-buttons button:hover { background: #f3e9d3; }
+    .qhp-hint { font-size: 11px; color: #777; line-height: 1.4; margin-top: 4px; }
+  </style>
+  <div class="qhp-card" id="qhpCard">
+    <div class="qhp-title">標註與筆記</div>
+    <label class="qhp-row"><span>顯示標註</span><input type="checkbox" id="qhpShowAnnotations"></label>
+    <label class="qhp-row"><span>顯示懸浮球</span><input type="checkbox" id="qhpShowBall"></label>
+    <div class="qhp-buttons">
+      <button type="button" id="qhpOpenSidebar">標註側邊欄</button>
+      <button type="button" id="qhpOpenPanel">全部標註</button>
+    </div>
+    <label class="qhp-row" style="border-top: 1px solid #eee; margin-top: 4px; padding-top: 8px;"><span>啟用 Companion 橋接</span><input type="checkbox" id="qhpBridgeEnabled"></label>
+    <div class="qhp-hint">沒有使用 Stream Deck / Companion 的電腦可以關閉橋接，工具列圖示就不會再顯示紅色驚嘆號。</div>
+  </div>
+  <div id="companionSection">
   <div id="updateBanner" style="display: none; background: #e8f0fe; border: 1px solid #c2e7ff; border-radius: 6px; padding: 9px 10px; margin-bottom: 12px; font-size: 12px; color: #0b57d0;">
     <div style="display: flex; justify-content: space-between; align-items: center;">
       <div style="font-weight: bold;" id="updateBannerTitle">🎉 發現新版本！</div>
@@ -278,6 +300,9 @@
     • <b>即時字幕推播</b>：主題為 <code>{prefix}/status/current_subtitle</code>。
   </div>
 
+  </div><!-- /companionSection -->
+
   <script src="popup.js"></script>
+  <script src="popup-annotations.js"></script>
 </body>
 </html>
